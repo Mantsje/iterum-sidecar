@@ -37,20 +37,27 @@ func sendReadiedFiles(socket Socket, conn net.Conn) {
 	}
 }
 
+func failOnError(err error, msg string) {
+	if err != nil {
+		log.Fatalf("%s: %s", msg, err)
+	}
+}
+
 func main() {
-	targetSocket := os.Getenv("PWD") + "/build/go.sock"
+	targetSocket := os.Getenv("DATA_VOLUME_PATH") + "/go.sock"
 	socket, err := NewSocket(targetSocket, 10, sendReadiedFiles)
 	util.Ensure(err, "Socket succesfully opened and listening")
 	socket.Start()
 
 	go func() {
 		fmt.Printf("Started goroutine which should listen to the message queue.\n")
+		fmt.Printf("Connecting to %s.\n", os.Getenv("BROKER_URL"))
 		conn, err := amqp.Dial(os.Getenv("BROKER_URL"))
-		util.Ensure(err, "Failed to connect to RabbitMQ")
+		failOnError(err, "Failed to connect to RabbitMQ")
 		defer conn.Close()
 
 		ch, err := conn.Channel()
-		util.Ensure(err, "Failed to open a channel")
+		failOnError(err, "Failed to open a channel")
 		defer ch.Close()
 
 		q, err := ch.QueueDeclare(
@@ -61,7 +68,7 @@ func main() {
 			false,              // no-wait
 			nil,                // arguments
 		)
-		util.Ensure(err, "Failed to declare a queue")
+		failOnError(err, "Failed to declare a queue")
 
 		msgs, err := ch.Consume(
 			q.Name, // queue
@@ -72,7 +79,7 @@ func main() {
 			false,  // no-wait
 			nil,    // args
 		)
-		util.Ensure(err, "Failed to register a consumer")
+		failOnError(err, "Failed to register a consumer")
 
 		for message := range msgs {
 			fragment := fmt.Sprintf("%s", message.Body)
