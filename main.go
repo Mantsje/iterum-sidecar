@@ -1,59 +1,73 @@
 package main
 
 import (
-	"encoding/binary"
-	"encoding/json"
-	"fmt"
 	"net"
 	"os"
 	"runtime"
-	"time"
 
-	"github.com/Mantsje/iterum-sidecar/util"
 	"github.com/prometheus/common/log"
+
+	"github.com/Mantsje/iterum-sidecar/transmit"
 )
 
 func sendReadiedFiles(socket Socket, conn net.Conn) {
+	defer conn.Close()
 	for {
 		// Wait for the next job to come off the queue.
-		msg := <-socket.Input
+		msg := <-socket.Channel
 
-		// Send the msg to the conn
-		data, err := json.Marshal(msg)
-		if err != nil {
-			log.Errorf("Error: could not marshal Msg due to '%v'", err)
+		// Send the msg over the connection
+		err := transmit.EncodeSend(conn, msg)
+
+		// Error handling
+		switch err.(type) {
+		case *transmit.SerializationError:
+			log.Warnf("Could not encode message due to '%v', skipping message", err)
 			continue
-		}
-
-		fragmentSize := make([]byte, 4)
-		binary.LittleEndian.PutUint32(fragmentSize, uint32(len(data)))
-		_, err = conn.Write(append(fragmentSize, data...))
-		if err != nil {
-			log.Warn(err)
-			fmt.Println("Closing connection")
-			socket.Input <- msg
+		case *transmit.ConnectionError:
+			log.Warnf("Closing connection towards due to '%v'", err)
 			return
+		default:
+			log.Errorf("%v, closing connection", err)
+			return
+		case nil:
 		}
 	}
 }
 
-func main() {
-	targetSocket := os.Getenv("PWD") + "/build/go.sock"
-	socket, err := NewSocket(targetSocket, 10, sendReadiedFiles)
-	util.Ensure(err, "Socket succesfully opened and listening")
-	socket.Start()
+func receiveProcessedFiles(socket Socket, conn net.Conn) {
+	defer conn.Close()
+	for {
+		msg := FragmentDesc{}
+		err := transmit.DecodeRead(conn, &msg)
 
-	// Message publisher
-	go func() {
-		fileIdx := 0
-		for {
-			time.Sleep(1 * time.Second)
-			fragment := fmt.Sprintf("file%d.txt", fileIdx)
-			fmt.Printf("putting '%v' on channel\n", fragment)
-			socket.Input <- Msg{fragment}
-			fileIdx++
+		// Error handling
+		switch err.(type) {
+		case *transmit.SerializationError:
+			log.Warnf("Could not encode message due to '%v', skipping message", err)
+			continue
+		case *transmit.ConnectionError:
+			log.Warnf("Closing connection towards due to '%v'", err)
+			return
+		default:
+			log.Errorf("%v, closing connection", err)
+			return
+		case nil:
 		}
-	}()
+
+		socket.Channel <- &msg
+	}
+}
+
+func main() {
+	toSocketFile := os.Getenv("PWD") + "/build/A_tts.sock"
+	fromSocketFile := os.Getenv("PWD") + "/build/A_fts.sock"
+
+	pipe := NewPipe(fromSocketFile, toSocketFile, 10, 10, receiveProcessedFiles, sendReadiedFiles)
+	pipe.Start()
+
+	go producer(pipe.ToTarget)
+	go consumer(pipe.FromTarget)
 
 	runtime.Goexit()
 }

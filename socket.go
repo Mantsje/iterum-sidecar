@@ -4,27 +4,26 @@ import (
 	"net"
 	"os"
 
+	"github.com/Mantsje/iterum-sidecar/transmit"
 	"github.com/Mantsje/iterum-sidecar/util"
 	"github.com/prometheus/common/log"
 )
 
-// Msg is the structure used to send to the transformation step
-type Msg struct {
-	File string `json:"file"`
-}
-
 // Socket is a structure holding a listener, accepting connections
-// Input is a channel that external things can post messages on that are
-// supposed to be sent to the connections
+// Channel is a channel that external things can post messages on take from that are
+// supposed to be sent to or from the connections
 type Socket struct {
 	Listener net.Listener
-	Input    chan Msg
-	handler  func(Socket, net.Conn)
+	Channel  chan transmit.Serializable
+	handler  ConnHandler
 }
 
-// NewSocket sets up a listener at the given socketPath and creates an input channel
+// ConnHandler is a handler function ran in a goroutine upon a socket accepting a new connection
+type ConnHandler func(Socket, net.Conn)
+
+// NewSocket sets up a listener at the given socketPath and creates thee channel
 // with the given bufferSize. It returns an error on failure
-func NewSocket(socketPath string, inputBufferSize int, handler func(Socket, net.Conn)) (s Socket, err error) {
+func NewSocket(socketPath string, bufferSize int, handler ConnHandler) (s Socket, err error) {
 	defer util.ReturnErrOnPanic(&err)
 	if _, errExist := os.Stat(socketPath); !os.IsNotExist(errExist) {
 		err = os.Remove(socketPath)
@@ -34,11 +33,11 @@ func NewSocket(socketPath string, inputBufferSize int, handler func(Socket, net.
 	listener, err := net.Listen("unix", socketPath)
 	util.Ensure(err, "Server created")
 
-	input := make(chan Msg, inputBufferSize)
+	channel := make(chan transmit.Serializable, bufferSize)
 
 	s = Socket{
 		listener,
-		input,
+		channel,
 		handler,
 	}
 	return

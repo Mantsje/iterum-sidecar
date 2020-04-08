@@ -21,23 +21,20 @@ def decode_fragment_desc(target: socket) -> dict:
     enc_fragment = target.recv(fragment_size)
     return json.loads(enc_fragment)
 
-def encode_fragment_desc(content: str) -> bytes:
-    return encode_bytes(content.encode("utf-8"))
+def encode_fragment_desc(content: dict) -> bytes:
+    return encode_bytes(json.dumps(content).encode("utf-8"))
 
-
-# Single input of cat images
-# input_name denotes the address of the input. Set via config file, and gathered via getenv()
-def cat_images(input_name:str) -> str:
+def from_sidecar(socket_name:str) -> str:
     while True:
         try:
             sidecar_cat_input = socket(AF_UNIX) 
-            sidecar_cat_input.connect(input_name)
+            sidecar_cat_input.connect(socket_name)
             while True:
                 # Decode messages sennd over this socket one-by-one
                 fragment = decode_fragment_desc(sidecar_cat_input)
                 yield fragment
         except Exception as err:
-            print(f"Exception: {err}, retrying connection in 5 seconds...", flush=True)
+            print(f"Exception: {err}, retrying from_sidecar connection in 5 seconds...", flush=True)
             time.sleep(5)
         finally: 
             # Clean up before trying again. Letting the other side know we quit this connection
@@ -45,9 +42,36 @@ def cat_images(input_name:str) -> str:
             sidecar_cat_input.close()
 
 
+def to_sidecar(socket_name:str) -> None:
+    msg_to_send:dict = None
+    while True:
+        try:
+            to_sidecar_socket = socket(AF_UNIX) 
+            to_sidecar_socket.connect(socket_name)
+            while True:
+                # If no received message, else we received one, but sending failed
+                if msg_to_send == None: 
+                    msg_to_send:dict = (yield)
+                print(f"sending: {msg_to_send}", flush=True)
+                encoding = encode_fragment_desc(msg_to_send)
+                to_sidecar_socket.send(encoding)
+                msg_to_send = None
+                yield
+        except Exception as err:
+            print(f"Exception: {err}, retrying to_sidecar connection in 5 seconds...", flush=True)
+            time.sleep(5)
+            to_sidecar_socket.shutdown(SHUT_RDWR)
+            to_sidecar_socket.close()
+
+
 if __name__ == "__main__":
     ENC_FRAGMENT_SIZE_LENGTH = 4
-    INPUT = os.getenv("PWD") + "/build/go.sock"
-
-    for image_file in cat_images(INPUT):
+    INPUT = os.getenv("PWD") + "/build/A_tts.sock"
+    OUTPUT = os.getenv("PWD") + "/build/A_fts.sock"
+    towards_sidecar = to_sidecar(OUTPUT)
+    next(towards_sidecar)
+    for image_file in from_sidecar(INPUT):
         print(image_file, flush=True)
+        image_file["file"] = image_file["file"].upper()
+        towards_sidecar.send(image_file)        
+        next(towards_sidecar)
