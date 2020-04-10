@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/common/log"
 
 	"github.com/Mantsje/iterum-sidecar/transmit"
+	"github.com/Mantsje/iterum-sidecar/util"
 )
 
 func sendReadiedFiles(socket Socket, conn net.Conn) {
@@ -59,15 +60,34 @@ func receiveProcessedFiles(socket Socket, conn net.Conn) {
 	}
 }
 
+func failOnError(err error, msg string) {
+	if err != nil {
+		log.Fatalf("%s: %s", msg, err)
+	}
+}
+
 func main() {
-	toSocketFile := os.Getenv("PWD") + "/build/A_tts.sock"
-	fromSocketFile := os.Getenv("PWD") + "/build/A_fts.sock"
+	toSocketFile := os.Getenv("DATA_VOLUME_PATH") + "/A_tts.sock"
+	fromSocketFile := os.Getenv("DATA_VOLUME_PATH") + "/A_fts.sock"
+	bufferSizeIn := 10
+	bufferSizeOut := 10
 
-	pipe := NewPipe(fromSocketFile, toSocketFile, 10, 10, receiveProcessedFiles, sendReadiedFiles)
-	pipe.Start()
+	toSocket, err := NewSocket(toSocketFile, bufferSizeIn, sendReadiedFiles)
+	util.Ensure(err, "Towards Socket succesfully opened and listening")
+	toSocket.Start()
 
-	go producer(pipe.ToTarget)
-	go consumer(pipe.FromTarget)
+	fromSocket, err := NewSocket(fromSocketFile, bufferSizeOut, receiveProcessedFiles)
+	util.Ensure(err, "From Socket succesfully opened and listening")
+	fromSocket.Start()
+
+	// Listen to MQ, pull files from Minio, send message to TS to start processing the fragment
+	messageQueueInput := make(chan transmit.Serializable)
+	messageQueueOutput := make(chan transmit.Serializable)
+
+	go listenToMq(messageQueueInput)
+	go retrieveFiles(messageQueueInput, toSocket.Channel)
+	go storeFiles(fromSocket.Channel, messageQueueOutput)
+	go sendToMq(messageQueueOutput)
 
 	runtime.Goexit()
 }
