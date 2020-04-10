@@ -5,7 +5,7 @@ import (
 	"github.com/Mantsje/iterum-sidecar/util"
 )
 
-// Pipe represents a bidrectional connection between an iterum sidecar and transformation step
+// Pipe represents a bidirectional connection between an iterum sidecar and transformation step
 // ToTarget and FromTarget refer to the channels in the two sockets
 // Messages supposed to go towards Target can be put on ToTarget and message from the Target are put on FromTarget
 type Pipe struct {

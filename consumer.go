@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/Mantsje/iterum-sidecar/data"
 	"github.com/Mantsje/iterum-sidecar/transmit"
 )
 
@@ -12,7 +13,7 @@ func consumer(channel chan transmit.Serializable) {
 		if !ok {
 			return
 		}
-		fragmentDesc := msg.(*FragmentDesc)
+		fragmentDesc := msg.(*data.LocalFragmentDesc)
 		fmt.Println(*fragmentDesc)
 	}
 }

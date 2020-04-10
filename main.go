@@ -7,6 +7,7 @@ import (
 
 	"github.com/prometheus/common/log"
 
+	"github.com/Mantsje/iterum-sidecar/data"
 	"github.com/Mantsje/iterum-sidecar/transmit"
 )
 
@@ -38,7 +39,7 @@ func sendReadiedFiles(socket Socket, conn net.Conn) {
 func receiveProcessedFiles(socket Socket, conn net.Conn) {
 	defer conn.Close()
 	for {
-		msg := FragmentDesc{}
+		msg := data.LocalFragmentDesc{}
 		err := transmit.DecodeRead(conn, &msg)
 
 		// Error handling
