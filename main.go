@@ -8,10 +8,11 @@ import (
 	"github.com/prometheus/common/log"
 
 	"github.com/Mantsje/iterum-sidecar/data"
+	"github.com/Mantsje/iterum-sidecar/socket"
 	"github.com/Mantsje/iterum-sidecar/transmit"
 )
 
-func sendReadiedFiles(socket Socket, conn net.Conn) {
+func sendReadiedFiles(socket socket.Socket, conn net.Conn) {
 	defer conn.Close()
 	for {
 		// Wait for the next job to come off the queue.
@@ -36,7 +37,7 @@ func sendReadiedFiles(socket Socket, conn net.Conn) {
 	}
 }
 
-func receiveProcessedFiles(socket Socket, conn net.Conn) {
+func receiveProcessedFiles(socket socket.Socket, conn net.Conn) {
 	defer conn.Close()
 	for {
 		msg := data.LocalFragmentDesc{}
@@ -64,11 +65,11 @@ func main() {
 	toSocketFile := os.Getenv("PWD") + "/build/A_tts.sock"
 	fromSocketFile := os.Getenv("PWD") + "/build/A_fts.sock"
 
-	pipe := NewPipe(fromSocketFile, toSocketFile, 10, 10, receiveProcessedFiles, sendReadiedFiles)
+	pipe := socket.NewPipe(fromSocketFile, toSocketFile, 10, 10, receiveProcessedFiles, sendReadiedFiles)
 	pipe.Start()
 
-	go producer(pipe.ToTarget)
-	go consumer(pipe.FromTarget)
+	go socket.Producer(pipe.ToTarget)
+	go socket.Consumer(pipe.FromTarget)
 
 	runtime.Goexit()
 }

@@ -1,4 +1,4 @@
-package main
+package socket
 
 import (
 	"fmt"
@@ -8,16 +8,17 @@ import (
 	"github.com/Mantsje/iterum-sidecar/transmit"
 )
 
-func producer(channel chan transmit.Serializable) {
+// Producer is a dummy setup to help test socket
+func Producer(channel chan transmit.Serializable) {
 	fileIdx := 0
 	for {
 		time.Sleep(1 * time.Second)
 		dummyName := fmt.Sprintf("file%d.txt", fileIdx)
 		dummyFile := data.LocalFileDesc{LocalPath: "./input/bucket/" + dummyName, Name: dummyName}
 		dummyFiles := []data.LocalFileDesc{dummyFile}
-		dummyFragmentDesc := &data.LocalFragmentDesc{Files: dummyFiles}
+		dummyFragmentDesc := newFragmentDesc(dummyFiles)
 		fmt.Printf("putting fragment on channel:'%v'\n", dummyFragmentDesc)
-		channel <- dummyFragmentDesc
+		channel <- &dummyFragmentDesc
 
 		fileIdx++
 	}
