@@ -1,25 +1,25 @@
-package main
+package socket
 
 import (
-	"github.com/Mantsje/iterum-sidecar/transmit"
+	"github.com/Mantsje/iterum-sidecar/data"
 	"github.com/Mantsje/iterum-sidecar/util"
 )
 
-// Pipe represents a bidrectional connection between an iterum sidecar and transformation step
+// Pipe represents a bidirectional connection between an iterum sidecar and transformation step
 // ToTarget and FromTarget refer to the channels in the two sockets
 // Messages supposed to go towards Target can be put on ToTarget and message from the Target are put on FromTarget
 type Pipe struct {
 	SocketTo   Socket
 	SocketFrom Socket
-	ToTarget   chan transmit.Serializable
-	FromTarget chan transmit.Serializable
+	ToTarget   chan data.LocalFragmentDesc
+	FromTarget chan data.LocalFragmentDesc
 }
 
 // NewPipe creates and initiates a new Pipe
-func NewPipe(fromFile, toFile string, fromBufferSize, toBufferSize int, fromHandler, toHandler ConnHandler) Pipe {
-	toSocket, err := NewSocket(toFile, toBufferSize, toHandler)
+func NewPipe(fromFile, toFile string, input, output chan data.LocalFragmentDesc, fromHandler, toHandler ConnHandler) Pipe {
+	toSocket, err := NewSocket(toFile, input, toHandler)
 	util.Ensure(err, "Towards Socket succesfully opened and listening")
-	fromSocket, err := NewSocket(fromFile, fromBufferSize, fromHandler)
+	fromSocket, err := NewSocket(fromFile, output, fromHandler)
 	util.Ensure(err, "From Socket succesfully opened and listening")
 
 	return Pipe{toSocket, fromSocket, toSocket.Channel, fromSocket.Channel}
