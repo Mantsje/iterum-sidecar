@@ -26,7 +26,6 @@ func (mqfd *fragmentDesc) Serialize() (data []byte, err error) {
 		err = transmit.ErrSerialization(err)
 	}
 	return
-
 }
 
 // Deserialize tries to decode a json encoded byte array into `mqfd`. Errors on failure
