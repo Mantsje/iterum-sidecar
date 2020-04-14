@@ -13,13 +13,21 @@ import (
 
 // Sender is the structure that listens to a channel and redirects messages to rabbitMQ
 type Sender struct {
-	toSend  <-chan data.RemoteFragmentDesc
-	channel *amqp.Channel
-	queue   amqp.Queue
+	toSend <-chan data.RemoteFragmentDesc
 }
 
 // NewSender creates a new sender which receives messages from a channel and sends them on the message queue.
 func NewSender(toSend <-chan data.RemoteFragmentDesc) (sender Sender, err error) {
+
+	sender = Sender{
+		toSend,
+	}
+	return
+}
+
+// StartBlocking listens to the channel, and send remoteFragments to the message queue on the OUTPUT_QUEUE queue.
+func (sender Sender) StartBlocking() {
+
 	fmt.Printf("Connecting to %s.\n", os.Getenv("BROKER_URL"))
 	conn, err := amqp.Dial(os.Getenv("BROKER_URL"))
 	util.Ensure(err, "Connected to RabbitMQ")
@@ -39,17 +47,6 @@ func NewSender(toSend <-chan data.RemoteFragmentDesc) (sender Sender, err error)
 	)
 	util.Ensure(err, "Created queue")
 
-	sender = Sender{
-		toSend,
-		ch,
-		q,
-	}
-	return
-}
-
-// StartBlocking listens to the channel, and send remoteFragments to the message queue on the OUTPUT_QUEUE queue.
-func (sender Sender) StartBlocking() {
-
 	for remoteFragment := range sender.toSend {
 
 		fmt.Printf("Received a remoteFragment to send to the queue: %s\n", remoteFragment)
@@ -60,10 +57,10 @@ func (sender Sender) StartBlocking() {
 			log.Errorln(err)
 		}
 
-		err = sender.channel.Publish(
-			"",                // exchange
-			sender.queue.Name, // routing key
-			false,             // mandatory
+		err = ch.Publish(
+			"",     // exchange
+			q.Name, // routing key
+			false,  // mandatory
 			false,
 			amqp.Publishing{
 				DeliveryMode: amqp.Persistent,

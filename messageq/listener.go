@@ -13,12 +13,21 @@ import (
 
 // Listener is the structure that listens to RabbitMQ and redirects messages to a channel
 type Listener struct {
-	MqOutput   chan<- data.RemoteFragmentDesc
-	mqMessages <-chan amqp.Delivery
+	MqOutput chan<- data.RemoteFragmentDesc
 }
 
 // NewListener creates a new message queue listener
 func NewListener(channel chan<- data.RemoteFragmentDesc) (listener Listener, err error) {
+
+	listener = Listener{
+		channel,
+	}
+	return
+}
+
+// StartBlocking listens on the rabbitMQ messagequeue and redirects messages on the INPUT_QUEUE to a channel
+func (listener Listener) StartBlocking() {
+
 	fmt.Printf("Connecting to %s.\n", os.Getenv("BROKER_URL"))
 	conn, err := amqp.Dial(os.Getenv("BROKER_URL"))
 	util.Ensure(err, "Connected to RabbitMQ")
@@ -49,18 +58,8 @@ func NewListener(channel chan<- data.RemoteFragmentDesc) (listener Listener, err
 	)
 	util.Ensure(err, "Registered consumer")
 
-	listener = Listener{
-		channel,
-		mqMessages,
-	}
-	return
-}
-
-// StartBlocking listens on the rabbitMQ messagequeue and redirects messages on the INPUT_QUEUE to a channel
-func (listener Listener) StartBlocking() {
-
 	fmt.Printf("Started listening for messages from the MQ.\n")
-	for message := range listener.mqMessages {
+	for message := range mqMessages {
 		var mqFragment MqFragmentDesc
 		err := mqFragment.Deserialize(message.Body)
 		if err != nil {
