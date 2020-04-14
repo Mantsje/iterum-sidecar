@@ -1,8 +1,6 @@
 package store
 
 import (
-	"fmt"
-
 	"github.com/Mantsje/iterum-sidecar/data"
 	"github.com/minio/minio-go/v6"
 	"github.com/prometheus/common/log"
@@ -10,21 +8,22 @@ import (
 
 // Downloader is a struct responsible for downloading a single fragment to local disk
 type Downloader struct {
-	Completed          map[string]string // maps the name to the LocalPath, "" means undownloaded
-	NotifyComplete     chan data.LocalFileDesc
+	Completed          map[string]string           // maps the name to the LocalPath, "" means undownloaded
+	NotifyComplete     chan data.LocalFileDesc     // Channel to notify downloader of individual file completion
+	NotifyManager      chan data.LocalFragmentDesc // Channel to notify download_manager of fragment completion
 	DownloadDescriptor data.RemoteFragmentDesc
 	Client             *minio.Client
 	Folder             string
 }
 
 // NewDownloader creates a new Downloader instance that will download teh pass fragment description
-func NewDownloader(msg data.RemoteFragmentDesc, client *minio.Client, targetFolder string) Downloader {
+func NewDownloader(msg data.RemoteFragmentDesc, client *minio.Client, manager chan data.LocalFragmentDesc, targetFolder string) Downloader {
 	completed := make(map[string]string)
 	for _, file := range msg.Files {
 		completed[file.Name] = ""
 	}
 
-	return Downloader{completed, make(chan data.LocalFileDesc, len(msg.Files)), msg, client, targetFolder}
+	return Downloader{completed, make(chan data.LocalFileDesc, len(msg.Files)), manager, msg, client, targetFolder}
 }
 
 // IsComplete checks whether all downloads have completed
@@ -52,9 +51,9 @@ func (d Downloader) completionTracker() {
 			files = append(files, dloadedFile)
 		}
 	}
-	log.Warnln("Still needs to send a LocalFragmentDesc")
 	lfd := data.LocalFragmentDesc{Files: files}
-	fmt.Println(lfd)
+	log.Infoln("Fragment downloaded")
+	d.NotifyManager <- lfd
 }
 
 func (d Downloader) download(descriptor data.RemoteFileDesc) {

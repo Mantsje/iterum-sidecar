@@ -23,7 +23,7 @@ type ConnHandler func(Socket, net.Conn)
 
 // NewSocket sets up a listener at the given socketPath and creates thee channel
 // with the given bufferSize. It returns an error on failure
-func NewSocket(socketPath string, bufferSize int, handler ConnHandler) (s Socket, err error) {
+func NewSocket(socketPath string, channel chan transmit.Serializable, handler ConnHandler) (s Socket, err error) {
 	defer util.ReturnErrOnPanic(&err)
 	if _, errExist := os.Stat(socketPath); !os.IsNotExist(errExist) {
 		err = os.Remove(socketPath)
@@ -32,8 +32,6 @@ func NewSocket(socketPath string, bufferSize int, handler ConnHandler) (s Socket
 
 	listener, err := net.Listen("unix", socketPath)
 	util.Ensure(err, "Server created")
-
-	channel := make(chan transmit.Serializable, bufferSize)
 
 	s = Socket{
 		listener,

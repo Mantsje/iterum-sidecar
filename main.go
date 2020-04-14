@@ -4,6 +4,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/Mantsje/iterum-sidecar/data"
 	"github.com/Mantsje/iterum-sidecar/store"
 
 	"github.com/Mantsje/iterum-sidecar/messageq"
@@ -31,7 +32,7 @@ func main() {
 
 	// Listen to MQ, pull files from Minio, send message to TS to start processing the fragment
 	// messageQueueInput := make(chan data.RemoteFragmentDesc)
-	// messageQueueOutput := make(chan data.RemoteFragmentDesc)
+	messageQueueOutput := make(chan data.RemoteFragmentDesc)
 
 	go messageq.Listener(downloadManager.ToDownload)
 	// go retrieveFiles(messageQueueInput, toSocket.Channel)

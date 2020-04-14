@@ -40,7 +40,7 @@ func Sender(channel <-chan data.RemoteFragmentDesc) {
 
 		body, err := mqFragment.Serialize()
 		if err != nil {
-			log.Error(err)
+			log.Errorln(err)
 		}
 
 		err = ch.Publish(

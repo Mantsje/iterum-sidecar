@@ -49,7 +49,7 @@ func Listener(channel chan<- data.RemoteFragmentDesc) {
 		var mqFragment mqFragmentDesc
 		err := mqFragment.Deserialize(message.Body)
 		if err != nil {
-			log.Error(err)
+			log.Errorln(err)
 		}
 		fmt.Printf("Received a mqFragment: %s\n", mqFragment)
 		var remoteFragment = mqFragment.RemoteFragmentDesc
