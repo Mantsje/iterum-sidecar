@@ -1,6 +1,8 @@
 package store
 
 import (
+	"os"
+
 	"github.com/Mantsje/iterum-sidecar/data"
 	"github.com/minio/minio-go/v6"
 	"github.com/prometheus/common/log"
@@ -14,9 +16,12 @@ type DownloadManager struct {
 
 // NewDownloadManager creates a new downloadmanager and initiates a client of the Minio service
 func NewDownloadManager(bufferSize int) DownloadManager {
-	endpoint := "localhost:9000"
-	accessKeyID := "minioadmin"
-	secretAccessKey := "minioadmin"
+	// endpoint := "localhost:9000"
+	// accessKeyID := "minioadmin"
+	// secretAccessKey := "minioadmin"
+	endpoint := os.Getenv("MINIO_URL")
+	accessKeyID := os.Getenv("MINIO_ACCESS_KEY")
+	secretAccessKey := os.Getenv("MINIO_SECRET_KEY")
 	useSSL := false
 
 	// Initialize minio client object.

@@ -9,18 +9,17 @@ import (
 
 // fragmentDesc is a structure describing an iterum fragment to process coming from the MQ
 // For now it is a copy of RemoteFragmentDesc but extensible for the future
-type fragmentDesc struct {
+type mqFragmentDesc struct {
 	data.RemoteFragmentDesc
 }
 
-func newFragmentDesc(files []data.RemoteFileDesc) fragmentDesc {
-	fd := fragmentDesc{data.RemoteFragmentDesc{}}
-	fd.Files = files
+func newFragmentDesc(remoteFrag data.RemoteFragmentDesc) mqFragmentDesc {
+	fd := mqFragmentDesc{remoteFrag}
 	return fd
 }
 
 // Serialize tries to transform `mqfd` into a json encoded bytearray. Errors on failure
-func (mqfd *fragmentDesc) Serialize() (data []byte, err error) {
+func (mqfd *mqFragmentDesc) Serialize() (data []byte, err error) {
 	data, err = json.Marshal(mqfd)
 	if err != nil {
 		err = transmit.ErrSerialization(err)
@@ -30,7 +29,7 @@ func (mqfd *fragmentDesc) Serialize() (data []byte, err error) {
 }
 
 // Deserialize tries to decode a json encoded byte array into `mqfd`. Errors on failure
-func (mqfd *fragmentDesc) Deserialize(data []byte) (err error) {
+func (mqfd *mqFragmentDesc) Deserialize(data []byte) (err error) {
 	err = json.Unmarshal(data, mqfd)
 	if err != nil {
 		err = transmit.ErrSerialization(err)
