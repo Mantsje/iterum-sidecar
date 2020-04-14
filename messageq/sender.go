@@ -1,12 +1,13 @@
 package messageq
 
 import (
-	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 
+	"github.com/prometheus/common/log"
+
 	"github.com/Mantsje/iterum-sidecar/data"
+	"github.com/Mantsje/iterum-sidecar/util"
 	"github.com/streadway/amqp"
 )
 
@@ -15,11 +16,11 @@ func Sender(channel <-chan data.RemoteFragmentDesc) {
 	fmt.Printf("Started goroutine which should send to the MQ.\n")
 	fmt.Printf("Connecting to %s.\n", os.Getenv("BROKER_URL"))
 	conn, err := amqp.Dial(os.Getenv("BROKER_URL"))
-	failOnError(err, "Failed to connect to RabbitMQ")
+	util.Ensure(err, "Connected to RabbitMQ")
 	defer conn.Close()
 
 	ch, err := conn.Channel()
-	failOnError(err, "Failed to open a channel")
+	util.Ensure(err, "Opened channel")
 	defer ch.Close()
 
 	q, err := ch.QueueDeclare(
@@ -30,16 +31,16 @@ func Sender(channel <-chan data.RemoteFragmentDesc) {
 		false,                     // no-wait
 		nil,                       // arguments
 	)
-	failOnError(err, "Failed to declare a queue")
+	util.Ensure(err, "Created queue")
 
 	for remoteFragment := range channel {
 
 		fmt.Printf("Received a remoteFragment to send to the queue: %s\n", remoteFragment)
 		mqFragment := newFragmentDesc(remoteFragment)
 
-		body, err := json.Marshal(mqFragment)
+		body, err := mqFragment.Serialize()
 		if err != nil {
-			log.Fatal(err)
+			log.Error(err)
 		}
 
 		err = ch.Publish(

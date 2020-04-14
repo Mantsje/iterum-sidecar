@@ -1,12 +1,13 @@
 package messageq
 
 import (
-	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 
+	"github.com/prometheus/common/log"
+
 	"github.com/Mantsje/iterum-sidecar/data"
+	"github.com/Mantsje/iterum-sidecar/util"
 	"github.com/streadway/amqp"
 )
 
@@ -15,11 +16,11 @@ func Listener(channel chan<- data.RemoteFragmentDesc) {
 	fmt.Printf("Started goroutine which should listen to the MQ.\n")
 	fmt.Printf("Connecting to %s.\n", os.Getenv("BROKER_URL"))
 	conn, err := amqp.Dial(os.Getenv("BROKER_URL"))
-	failOnError(err, "Failed to connect to RabbitMQ")
+	util.Ensure(err, "Connected to RabbitMQ")
 	defer conn.Close()
 
 	ch, err := conn.Channel()
-	failOnError(err, "Failed to open a channel")
+	util.Ensure(err, "Opened channel")
 	defer ch.Close()
 
 	q, err := ch.QueueDeclare(
@@ -30,7 +31,7 @@ func Listener(channel chan<- data.RemoteFragmentDesc) {
 		false,                    // no-wait
 		nil,                      // arguments
 	)
-	failOnError(err, "Failed to declare a queue")
+	util.Ensure(err, "Created queue")
 
 	msgs, err := ch.Consume(
 		q.Name, // queue
@@ -41,14 +42,14 @@ func Listener(channel chan<- data.RemoteFragmentDesc) {
 		false,  // no-wait
 		nil,    // args
 	)
-	failOnError(err, "Failed to register a consumer")
+	util.Ensure(err, "Registered consumer")
 
 	fmt.Printf("Started listening for messages from the MQ.\n")
 	for message := range msgs {
 		var mqFragment mqFragmentDesc
-		err := json.Unmarshal(message.Body, &mqFragment)
+		err := mqFragment.Deserialize(message.Body)
 		if err != nil {
-			log.Fatal(err)
+			log.Error(err)
 		}
 		fmt.Printf("Received a mqFragment: %s\n", mqFragment)
 		var remoteFragment = mqFragment.RemoteFragmentDesc
