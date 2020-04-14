@@ -31,7 +31,7 @@ func main() {
 	downloadManager := store.NewDownloadManager(downloaderBufferSize)
 
 	// Listen to MQ, pull files from Minio, send message to TS to start processing the fragment
-	messageQueueInput := make(chan data.RemoteFragmentDesc)
+	// messageQueueInput := make(chan data.RemoteFragmentDesc)
 	messageQueueOutput := make(chan data.RemoteFragmentDesc)
 
 	go messageq.Listener(downloadManager.ToDownload)

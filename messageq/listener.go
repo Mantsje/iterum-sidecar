@@ -1,7 +1,6 @@
 package messageq
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -46,7 +45,8 @@ func Listener(channel chan<- data.RemoteFragmentDesc) {
 	fmt.Printf("Started listening for messages from the MQ.\n")
 	for message := range msgs {
 		var mqFragment mqFragmentDesc
-		err := json.Unmarshal(message.Body, &mqFragment)
+		err := mqFragment.Deserialize(message.Body)
+		// err := json.Unmarshal(message.Body, &mqFragment)
 		if err != nil {
 			log.Fatal(err)
 		}

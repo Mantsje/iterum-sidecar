@@ -3,10 +3,10 @@ package messageq
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/Mantsje/iterum-sidecar/data"
+	"github.com/prometheus/common/log"
 	"github.com/streadway/amqp"
 )
 
@@ -39,7 +39,7 @@ func Sender(channel <-chan data.RemoteFragmentDesc) {
 
 		body, err := json.Marshal(mqFragment)
 		if err != nil {
-			log.Fatal(err)
+			log.Errorln(err)
 		}
 
 		err = ch.Publish(
