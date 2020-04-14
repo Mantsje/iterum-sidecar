@@ -70,6 +70,9 @@ func (sender Sender) StartBlocking() {
 				ContentType:  "application/json",
 				Body:         body,
 			})
+		if err != nil {
+			log.Errorln(err)
+		}
 	}
 	fmt.Printf("Processed all messages...\n")
 
