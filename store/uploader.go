@@ -62,15 +62,17 @@ func (u Uploader) upload(descriptor data.LocalFileDesc) {
 	if errBucketExists != nil {
 		log.Errorf("Upload failed due to failure of bucket existence checking: '%v'\n", errBucketExists)
 	} else if !exists {
-		log.Errorf("Upload failed bucket '%v' does not exist\n", u.Bucket)
-	} else {
-		// Upload the file with FPutObject
-		_, err := u.Client.FPutObject(u.Bucket, descriptor.Name, descriptor.LocalPath, putOptions)
-
-		if err != nil {
-			log.Errorf("Upload failed due to: '%v'", err)
+		log.Errorf("Bucket '%v' does not exist, creating...\n", u.Bucket)
+		errMakeBucket := u.Client.MakeBucket(u.Bucket, "")
+		if errMakeBucket != nil {
+			log.Errorf("Failed to create bucket '%v' due to: '%v'\n", u.Bucket, errMakeBucket)
 		}
-
+	}
+	// Upload the file with FPutObject
+	_, err := u.Client.FPutObject(u.Bucket, descriptor.Name, descriptor.LocalPath, putOptions)
+	if err != nil {
+		log.Errorf("Upload failed due to: '%v'", err)
+	} else {
 		u.NotifyComplete <- data.RemoteFileDesc{Name: descriptor.Name, RemotePath: descriptor.Name, Bucket: u.Bucket}
 	}
 }
