@@ -11,9 +11,14 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// Listener listens on the rabbitMQ messagequeue and redirects messages on the INPUT_QUEUE to a channel
-func Listener(channel chan<- data.RemoteFragmentDesc) {
-	fmt.Printf("Started goroutine which should listen to the MQ.\n")
+// Listener is the structure that listens to RabbitMQ and redirects messages to a channel
+type Listener struct {
+	MqOutput   chan<- data.RemoteFragmentDesc
+	mqMessages <-chan amqp.Delivery
+}
+
+// NewListener creates a new message queue listener
+func NewListener(channel chan<- data.RemoteFragmentDesc) (listener Listener, err error) {
 	fmt.Printf("Connecting to %s.\n", os.Getenv("BROKER_URL"))
 	conn, err := amqp.Dial(os.Getenv("BROKER_URL"))
 	util.Ensure(err, "Connected to RabbitMQ")
@@ -33,7 +38,7 @@ func Listener(channel chan<- data.RemoteFragmentDesc) {
 	)
 	util.Ensure(err, "Created queue")
 
-	msgs, err := ch.Consume(
+	mqMessages, err := ch.Consume(
 		q.Name, // queue
 		"",     // consumer
 		true,   // auto-ack
@@ -44,8 +49,18 @@ func Listener(channel chan<- data.RemoteFragmentDesc) {
 	)
 	util.Ensure(err, "Registered consumer")
 
+	listener = Listener{
+		channel,
+		mqMessages,
+	}
+	return
+}
+
+// StartBlocking listens on the rabbitMQ messagequeue and redirects messages on the INPUT_QUEUE to a channel
+func (listener Listener) StartBlocking() {
+
 	fmt.Printf("Started listening for messages from the MQ.\n")
-	for message := range msgs {
+	for message := range listener.mqMessages {
 		var mqFragment MqFragmentDesc
 		err := mqFragment.Deserialize(message.Body)
 		if err != nil {
@@ -55,8 +70,13 @@ func Listener(channel chan<- data.RemoteFragmentDesc) {
 		var remoteFragment = mqFragment.RemoteFragmentDesc
 		fmt.Printf("Unwrapping to remoteFragment: %s\n", remoteFragment)
 
-		channel <- remoteFragment
+		listener.MqOutput <- remoteFragment
 	}
 	fmt.Printf("Processed all messages...\n")
 
+}
+
+// Start asychronously calls StartBlocking via Gorouting
+func (listener Listener) Start() {
+	go listener.StartBlocking()
 }

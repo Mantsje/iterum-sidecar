@@ -11,9 +11,15 @@ import (
 	"github.com/streadway/amqp"
 )
 
-// Sender listens to the channel, and send remoteFragments to the message queue on the OUTPUT_QUEUE queue.
-func Sender(channel <-chan data.RemoteFragmentDesc) {
-	fmt.Printf("Started goroutine which should send to the MQ.\n")
+// Sender is the structure that listens to a channel and redirects messages to rabbitMQ
+type Sender struct {
+	toSend  <-chan data.RemoteFragmentDesc
+	channel *amqp.Channel
+	queue   amqp.Queue
+}
+
+// NewSender creates a new sender which receives messages from a channel and sends them on the message queue.
+func NewSender(toSend <-chan data.RemoteFragmentDesc) (sender Sender, err error) {
 	fmt.Printf("Connecting to %s.\n", os.Getenv("BROKER_URL"))
 	conn, err := amqp.Dial(os.Getenv("BROKER_URL"))
 	util.Ensure(err, "Connected to RabbitMQ")
@@ -33,7 +39,18 @@ func Sender(channel <-chan data.RemoteFragmentDesc) {
 	)
 	util.Ensure(err, "Created queue")
 
-	for remoteFragment := range channel {
+	sender = Sender{
+		toSend,
+		ch,
+		q,
+	}
+	return
+}
+
+// StartBlocking listens to the channel, and send remoteFragments to the message queue on the OUTPUT_QUEUE queue.
+func (sender Sender) StartBlocking() {
+
+	for remoteFragment := range sender.toSend {
 
 		fmt.Printf("Received a remoteFragment to send to the queue: %s\n", remoteFragment)
 		mqFragment := newFragmentDesc(remoteFragment)
@@ -43,10 +60,10 @@ func Sender(channel <-chan data.RemoteFragmentDesc) {
 			log.Errorln(err)
 		}
 
-		err = ch.Publish(
-			"",     // exchange
-			q.Name, // routing key
-			false,  // mandatory
+		err = sender.channel.Publish(
+			"",                // exchange
+			sender.queue.Name, // routing key
+			false,             // mandatory
 			false,
 			amqp.Publishing{
 				DeliveryMode: amqp.Persistent,
@@ -56,4 +73,9 @@ func Sender(channel <-chan data.RemoteFragmentDesc) {
 	}
 	fmt.Printf("Processed all messages...\n")
 
+}
+
+// Start asychronously calls StartBlocking via Gorouting
+func (sender Sender) Start() {
+	go sender.StartBlocking()
 }

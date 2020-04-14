@@ -42,8 +42,13 @@ func main() {
 	downloadManager.Start()
 
 	// MessageQueue setup
-	go messageq.Listener(mqDownloaderBridge)
-	go messageq.Sender(uploaderMqBridge)
+	mqListener, err := messageq.NewListener(mqDownloaderBridge)
+	util.Ensure(err, "MessageQueue listener succesfully created and listening")
+	mqListener.Start()
+
+	mqSender, err := messageq.NewSender(uploaderMqBridge)
+	util.Ensure(err, "MessageQueue sender succesfully created and listening")
+	mqSender.Start()
 
 	runtime.Goexit()
 }
