@@ -13,3 +13,5 @@ link: FORCE
 clean: FORCE
 	sudo rm /usr/bin/iterum-sidecar
 	
+image:
+	docker build -t iterum-sidecar:1 .
