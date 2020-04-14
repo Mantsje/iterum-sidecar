@@ -46,7 +46,7 @@ func Listener(channel chan<- data.RemoteFragmentDesc) {
 
 	fmt.Printf("Started listening for messages from the MQ.\n")
 	for message := range msgs {
-		var mqFragment mqFragmentDesc
+		var mqFragment MqFragmentDesc
 		err := mqFragment.Deserialize(message.Body)
 		if err != nil {
 			log.Errorln(err)

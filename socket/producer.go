@@ -17,8 +17,11 @@ func SendFileHandler(socket Socket, conn net.Conn) {
 		// Wait for the next job to come off the queue.
 		msg := <-socket.Channel
 
+		// wrap general type into specific socket fragmentDesc before sending
+		lfd := fragmentDesc{msg}
+
 		// Send the msg over the connection
-		err := transmit.EncodeSend(conn, msg)
+		err := transmit.EncodeSend(conn, &lfd)
 
 		// Error handling
 		switch err.(type) {
