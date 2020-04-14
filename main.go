@@ -41,6 +41,10 @@ func main() {
 	downloadManager := store.NewDownloadManager(mqDownloaderBridge, downloaderSocketBridge)
 	downloadManager.Start()
 
+	// Upload manager setup
+	uploadManager := store.NewUploadManager(socketUploaderBridge, uploaderMqBridge)
+	uploadManager.Start()
+
 	// MessageQueue setup
 	mqListener, err := messageq.NewListener(mqDownloaderBridge)
 	util.Ensure(err, "MessageQueue listener succesfully created and listening")
