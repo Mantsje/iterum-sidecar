@@ -4,7 +4,8 @@ import (
 	"net"
 	"os"
 
-	"github.com/Mantsje/iterum-sidecar/transmit"
+	"github.com/Mantsje/iterum-sidecar/data"
+
 	"github.com/Mantsje/iterum-sidecar/util"
 	"github.com/prometheus/common/log"
 )
@@ -14,16 +15,16 @@ import (
 // supposed to be sent to or from the connections
 type Socket struct {
 	Listener net.Listener
-	Channel  chan transmit.Serializable
+	Channel  chan data.LocalFragmentDesc
 	handler  ConnHandler
 }
 
 // ConnHandler is a handler function ran in a goroutine upon a socket accepting a new connection
 type ConnHandler func(Socket, net.Conn)
 
-// NewSocket sets up a listener at the given socketPath and creates thee channel
+// NewSocket sets up a listener at the given socketPath and links the passed channel
 // with the given bufferSize. It returns an error on failure
-func NewSocket(socketPath string, channel chan transmit.Serializable, handler ConnHandler) (s Socket, err error) {
+func NewSocket(socketPath string, channel chan data.LocalFragmentDesc, handler ConnHandler) (s Socket, err error) {
 	defer util.ReturnErrOnPanic(&err)
 	if _, errExist := os.Stat(socketPath); !os.IsNotExist(errExist) {
 		err = os.Remove(socketPath)

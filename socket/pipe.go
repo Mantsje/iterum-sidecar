@@ -1,7 +1,7 @@
 package socket
 
 import (
-	"github.com/Mantsje/iterum-sidecar/transmit"
+	"github.com/Mantsje/iterum-sidecar/data"
 	"github.com/Mantsje/iterum-sidecar/util"
 )
 
@@ -11,12 +11,12 @@ import (
 type Pipe struct {
 	SocketTo   Socket
 	SocketFrom Socket
-	ToTarget   chan transmit.Serializable
-	FromTarget chan transmit.Serializable
+	ToTarget   chan data.LocalFragmentDesc
+	FromTarget chan data.LocalFragmentDesc
 }
 
 // NewPipe creates and initiates a new Pipe
-func NewPipe(fromFile, toFile string, input, output chan transmit.Serializable, fromHandler, toHandler ConnHandler) Pipe {
+func NewPipe(fromFile, toFile string, input, output chan data.LocalFragmentDesc, fromHandler, toHandler ConnHandler) Pipe {
 	toSocket, err := NewSocket(toFile, input, toHandler)
 	util.Ensure(err, "Towards Socket succesfully opened and listening")
 	fromSocket, err := NewSocket(fromFile, output, fromHandler)

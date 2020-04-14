@@ -29,7 +29,10 @@ func ProcessedFileHandler(socket Socket, conn net.Conn) {
 		case nil:
 		}
 
-		socket.Channel <- &msg
+		// unwrap socket fragmentDesc into general type before posting on output
+		lfd := msg.LocalFragmentDesc
+
+		socket.Channel <- lfd
 	}
 }
 
