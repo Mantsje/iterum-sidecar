@@ -7,10 +7,16 @@ import (
 	"github.com/Mantsje/iterum-sidecar/transmit"
 )
 
-// FragmentDfragmentDescesc is a structure describing an iterum fragment to process coming from the MQ
+// fragmentDesc is a structure describing an iterum fragment to process coming from the MQ
 // For now it is a copy of RemoteFragmentDesc but extensible for the future
 type fragmentDesc struct {
-	*data.RemoteFragmentDesc
+	data.RemoteFragmentDesc
+}
+
+func newFragmentDesc(files []data.RemoteFileDesc) fragmentDesc {
+	fd := fragmentDesc{data.RemoteFragmentDesc{}}
+	fd.Files = files
+	return fd
 }
 
 // Serialize tries to transform `mqfd` into a json encoded bytearray. Errors on failure

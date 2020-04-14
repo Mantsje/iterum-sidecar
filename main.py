@@ -72,6 +72,6 @@ if __name__ == "__main__":
     next(towards_sidecar)
     for image_file in from_sidecar(INPUT):
         print(image_file, flush=True)
-        image_file["file"] = image_file["file"].upper()
+        image_file["files"][0]['path'] = "./output/"+image_file["files"][0]['path'][8:]
         towards_sidecar.send(image_file)        
         next(towards_sidecar)

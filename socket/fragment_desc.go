@@ -10,12 +10,12 @@ import (
 // fragmentDesc is a structure describing a local iterum fragment that
 // can be exchanged between the sidecar and the TS
 type fragmentDesc struct {
-	*data.LocalFragmentDesc
+	data.LocalFragmentDesc
 }
 
 // newFragmentDesc makes a new fragment description suited for use within socket package
 func newFragmentDesc(files []data.LocalFileDesc) fragmentDesc {
-	sfd := fragmentDesc{}
+	sfd := fragmentDesc{data.LocalFragmentDesc{}}
 	sfd.Files = files
 	return sfd
 }
