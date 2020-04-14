@@ -17,15 +17,12 @@ type DownloadManager struct {
 }
 
 // NewDownloadManager creates a new downloadmanager and initiates a client of the Minio service
-func NewDownloadManager(bufferSize int) DownloadManager {
-	// endpoint := "localhost:9000"
-	// accessKeyID := "minioadmin"
-	// secretAccessKey := "minioadmin"
+func NewDownloadManager(toDownload chan data.RemoteFragmentDesc, completed chan data.LocalFragmentDesc) DownloadManager {
 	endpoint := os.Getenv("MINIO_URL")
 	accessKeyID := os.Getenv("MINIO_ACCESS_KEY")
 	secretAccessKey := os.Getenv("MINIO_SECRET_KEY")
-	useSSL, err := strconv.ParseBool(os.Getenv("MINIO_USE_SSL"))
-	if err != nil {
+	useSSL, sslErr := strconv.ParseBool(os.Getenv("MINIO_USE_SSL"))
+	if sslErr != nil {
 		useSSL = false
 	}
 
@@ -34,9 +31,6 @@ func NewDownloadManager(bufferSize int) DownloadManager {
 	if err != nil {
 		log.Fatalln(err)
 	}
-
-	toDownload := make(chan data.RemoteFragmentDesc, bufferSize)
-	completed := make(chan data.LocalFragmentDesc, bufferSize)
 
 	return DownloadManager{toDownload, completed, client}
 }
