@@ -4,12 +4,12 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/Mantsje/iterum-sidecar/data"
-	"github.com/Mantsje/iterum-sidecar/store"
+	"github.com/iterum-provenance/sidecar/data"
+	"github.com/iterum-provenance/sidecar/store"
 
-	"github.com/Mantsje/iterum-sidecar/messageq"
-	"github.com/Mantsje/iterum-sidecar/socket"
-	"github.com/Mantsje/iterum-sidecar/util"
+	"github.com/iterum-provenance/sidecar/messageq"
+	"github.com/iterum-provenance/sidecar/socket"
+	"github.com/iterum-provenance/sidecar/util"
 )
 
 func main() {

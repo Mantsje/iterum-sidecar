@@ -6,8 +6,8 @@ import (
 
 	"github.com/prometheus/common/log"
 
-	"github.com/Mantsje/iterum-sidecar/data"
-	"github.com/Mantsje/iterum-sidecar/util"
+	"github.com/iterum-provenance/sidecar/data"
+	"github.com/iterum-provenance/sidecar/util"
 	"github.com/streadway/amqp"
 )
 

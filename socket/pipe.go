@@ -1,8 +1,8 @@
 package socket
 
 import (
-	"github.com/Mantsje/iterum-sidecar/data"
-	"github.com/Mantsje/iterum-sidecar/util"
+	"github.com/iterum-provenance/sidecar/data"
+	"github.com/iterum-provenance/sidecar/util"
 )
 
 // Pipe represents a bidirectional connection between an iterum sidecar and transformation step

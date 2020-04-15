@@ -3,7 +3,7 @@ package data
 import (
 	"encoding/json"
 
-	"github.com/Mantsje/iterum-sidecar/transmit"
+	"github.com/iterum-provenance/sidecar/transmit"
 )
 
 // LocalFragmentDesc is a structure describing an iterum fragment

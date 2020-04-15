@@ -4,7 +4,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/Mantsje/iterum-sidecar/data"
+	"github.com/iterum-provenance/sidecar/data"
 	"github.com/minio/minio-go/v6"
 	"github.com/prometheus/common/log"
 )

@@ -3,8 +3,8 @@ package socket
 import (
 	"encoding/json"
 
-	"github.com/Mantsje/iterum-sidecar/data"
-	"github.com/Mantsje/iterum-sidecar/transmit"
+	"github.com/iterum-provenance/sidecar/data"
+	"github.com/iterum-provenance/sidecar/transmit"
 )
 
 // fragmentDesc is a structure describing a local iterum fragment that

@@ -1,4 +1,4 @@
-module github.com/Mantsje/iterum-sidecar
+module github.com/iterum-provenance/sidecar
 
 go 1.14
 

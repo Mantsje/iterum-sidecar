@@ -3,8 +3,8 @@ package messageq
 import (
 	"encoding/json"
 
-	"github.com/Mantsje/iterum-sidecar/data"
-	"github.com/Mantsje/iterum-sidecar/transmit"
+	"github.com/iterum-provenance/sidecar/data"
+	"github.com/iterum-provenance/sidecar/transmit"
 )
 
 // mqFragmentDesc is a structure describing an iterum fragment to process coming from the MQ

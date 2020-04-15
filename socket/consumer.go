@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/Mantsje/iterum-sidecar/transmit"
+	"github.com/iterum-provenance/sidecar/transmit"
 	"github.com/prometheus/common/log"
 )
 
