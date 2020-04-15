@@ -6,18 +6,18 @@ import (
 
 	"github.com/prometheus/common/log"
 
-	"github.com/iterum-provenance/sidecar/data"
+	"github.com/iterum-provenance/sidecar/transmit"
 	"github.com/iterum-provenance/sidecar/util"
 	"github.com/streadway/amqp"
 )
 
 // Listener is the structure that listens to RabbitMQ and redirects messages to a channel
 type Listener struct {
-	MqOutput chan<- data.RemoteFragmentDesc
+	MqOutput chan<- transmit.Serializable // data.RemoteFragmentDesc
 }
 
 // NewListener creates a new message queue listener
-func NewListener(channel chan<- data.RemoteFragmentDesc) (listener Listener, err error) {
+func NewListener(channel chan<- transmit.Serializable) (listener Listener, err error) {
 
 	listener = Listener{
 		channel,
@@ -69,7 +69,7 @@ func (listener Listener) StartBlocking() {
 		var remoteFragment = mqFragment.RemoteFragmentDesc
 		fmt.Printf("Unwrapping to remoteFragment: %s\n", remoteFragment)
 
-		listener.MqOutput <- remoteFragment
+		listener.MqOutput <- &remoteFragment
 	}
 	fmt.Printf("Processed all messages...\n")
 

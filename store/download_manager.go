@@ -5,19 +5,20 @@ import (
 	"strconv"
 
 	"github.com/iterum-provenance/sidecar/data"
+	"github.com/iterum-provenance/sidecar/transmit"
 	"github.com/minio/minio-go/v6"
 	"github.com/prometheus/common/log"
 )
 
 // DownloadManager is the structure that consumes RemoteFragmentDesc structures and downloads them
 type DownloadManager struct {
-	ToDownload chan data.RemoteFragmentDesc
-	Completed  chan data.LocalFragmentDesc
+	ToDownload chan transmit.Serializable // data.RemoteFragmentDesc
+	Completed  chan transmit.Serializable // data.LocalFragmentDesc
 	Client     *minio.Client
 }
 
 // NewDownloadManager creates a new downloadmanager and initiates a client of the Minio service
-func NewDownloadManager(toDownload chan data.RemoteFragmentDesc, completed chan data.LocalFragmentDesc) DownloadManager {
+func NewDownloadManager(toDownload, completed chan transmit.Serializable) DownloadManager {
 	endpoint := os.Getenv("MINIO_URL")
 	accessKeyID := os.Getenv("MINIO_ACCESS_KEY")
 	secretAccessKey := os.Getenv("MINIO_SECRET_KEY")
@@ -39,7 +40,7 @@ func NewDownloadManager(toDownload chan data.RemoteFragmentDesc, completed chan 
 func (dm DownloadManager) StartBlocking() {
 	for {
 		msg := <-dm.ToDownload
-		dloader := NewDownloader(msg, dm.Client, dm.Completed, "./")
+		dloader := NewDownloader(*msg.(*data.RemoteFragmentDesc), dm.Client, dm.Completed, "./")
 		go dloader.Start()
 	}
 }

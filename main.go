@@ -4,8 +4,8 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/iterum-provenance/sidecar/data"
 	"github.com/iterum-provenance/sidecar/store"
+	"github.com/iterum-provenance/sidecar/transmit"
 
 	"github.com/iterum-provenance/sidecar/messageq"
 	"github.com/iterum-provenance/sidecar/socket"
@@ -14,16 +14,16 @@ import (
 
 func main() {
 	mqDownloaderBridgeBufferSize := 10
-	mqDownloaderBridge := make(chan data.RemoteFragmentDesc, mqDownloaderBridgeBufferSize)
+	mqDownloaderBridge := make(chan transmit.Serializable, mqDownloaderBridgeBufferSize)
 
 	downloaderSocketBridgeBufferSize := 10
-	downloaderSocketBridge := make(chan data.LocalFragmentDesc, downloaderSocketBridgeBufferSize)
+	downloaderSocketBridge := make(chan transmit.Serializable, downloaderSocketBridgeBufferSize)
 
 	socketUploaderBridgeBufferSize := 10
-	socketUploaderBridge := make(chan data.LocalFragmentDesc, socketUploaderBridgeBufferSize)
+	socketUploaderBridge := make(chan transmit.Serializable, socketUploaderBridgeBufferSize)
 
 	uploaderMqBridgeBufferSize := 10
-	uploaderMqBridge := make(chan data.RemoteFragmentDesc, uploaderMqBridgeBufferSize)
+	uploaderMqBridge := make(chan transmit.Serializable, uploaderMqBridgeBufferSize)
 
 	// Socket setup
 	toSocketFile := os.Getenv("DATA_VOLUME_PATH") + "/tts.sock"

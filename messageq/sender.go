@@ -7,17 +7,18 @@ import (
 	"github.com/prometheus/common/log"
 
 	"github.com/iterum-provenance/sidecar/data"
+	"github.com/iterum-provenance/sidecar/transmit"
 	"github.com/iterum-provenance/sidecar/util"
 	"github.com/streadway/amqp"
 )
 
 // Sender is the structure that listens to a channel and redirects messages to rabbitMQ
 type Sender struct {
-	toSend <-chan data.RemoteFragmentDesc
+	toSend <-chan transmit.Serializable // data.RemoteFragmentDesc
 }
 
 // NewSender creates a new sender which receives messages from a channel and sends them on the message queue.
-func NewSender(toSend <-chan data.RemoteFragmentDesc) (sender Sender, err error) {
+func NewSender(toSend <-chan transmit.Serializable) (sender Sender, err error) {
 
 	sender = Sender{
 		toSend,
@@ -50,7 +51,7 @@ func (sender Sender) StartBlocking() {
 	for remoteFragment := range sender.toSend {
 
 		fmt.Printf("Received a remoteFragment to send to the queue: %s\n", remoteFragment)
-		mqFragment := newFragmentDesc(remoteFragment)
+		mqFragment := newFragmentDesc(*remoteFragment.(*data.RemoteFragmentDesc))
 
 		body, err := mqFragment.Serialize()
 		if err != nil {

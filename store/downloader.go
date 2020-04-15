@@ -2,22 +2,23 @@ package store
 
 import (
 	"github.com/iterum-provenance/sidecar/data"
+	"github.com/iterum-provenance/sidecar/transmit"
 	"github.com/minio/minio-go/v6"
 	"github.com/prometheus/common/log"
 )
 
 // Downloader is a struct responsible for downloading a single fragment to local disk
 type Downloader struct {
-	Completed          map[string]string           // maps the name to the LocalPath, "" means undownloaded
-	NotifyComplete     chan data.LocalFileDesc     // Channel to notify downloader of individual file completion
-	NotifyManager      chan data.LocalFragmentDesc // Channel to notify download_manager of fragment completion
+	Completed          map[string]string          // maps the name to the LocalPath, "" means undownloaded
+	NotifyComplete     chan data.LocalFileDesc    // Channel to notify downloader of individual file completion
+	NotifyManager      chan transmit.Serializable // Channel to notify download_manager of fragment completion
 	DownloadDescriptor data.RemoteFragmentDesc
 	Client             *minio.Client
 	Folder             string
 }
 
 // NewDownloader creates a new Downloader instance that will download teh pass fragment description
-func NewDownloader(msg data.RemoteFragmentDesc, client *minio.Client, manager chan data.LocalFragmentDesc, targetFolder string) Downloader {
+func NewDownloader(msg data.RemoteFragmentDesc, client *minio.Client, manager chan transmit.Serializable, targetFolder string) Downloader {
 	completed := make(map[string]string)
 	for _, file := range msg.Files {
 		completed[file.Name] = ""
@@ -53,7 +54,7 @@ func (d Downloader) completionTracker() {
 	}
 	lfd := data.LocalFragmentDesc{Files: files}
 	log.Infoln("Fragment downloaded")
-	d.NotifyManager <- lfd
+	d.NotifyManager <- &lfd
 }
 
 func (d Downloader) download(descriptor data.RemoteFileDesc) {

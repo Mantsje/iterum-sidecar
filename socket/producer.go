@@ -18,7 +18,7 @@ func SendFileHandler(socket Socket, conn net.Conn) {
 		msg := <-socket.Channel
 
 		// wrap general type into specific socket fragmentDesc before sending
-		lfd := fragmentDesc{msg}
+		lfd := fragmentDesc{*msg.(*data.LocalFragmentDesc)}
 
 		// Send the msg over the connection
 		err := transmit.EncodeSend(conn, &lfd)

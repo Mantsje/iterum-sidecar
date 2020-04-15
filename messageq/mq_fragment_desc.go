@@ -7,7 +7,7 @@ import (
 	"github.com/iterum-provenance/sidecar/transmit"
 )
 
-// mqFragmentDesc is a structure describing an iterum fragment to process coming from the MQ
+// MqFragmentDesc is a structure describing an iterum fragment to process coming from the MQ
 // For now it is a copy of RemoteFragmentDesc but extensible for the future
 type MqFragmentDesc struct {
 	data.RemoteFragmentDesc

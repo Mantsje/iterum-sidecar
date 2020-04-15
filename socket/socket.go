@@ -4,8 +4,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/iterum-provenance/sidecar/data"
-
+	"github.com/iterum-provenance/sidecar/transmit"
 	"github.com/iterum-provenance/sidecar/util"
 	"github.com/prometheus/common/log"
 )
@@ -15,7 +14,7 @@ import (
 // supposed to be sent to or from the connections
 type Socket struct {
 	Listener net.Listener
-	Channel  chan data.LocalFragmentDesc
+	Channel  chan transmit.Serializable
 	handler  ConnHandler
 }
 
@@ -24,7 +23,7 @@ type ConnHandler func(Socket, net.Conn)
 
 // NewSocket sets up a listener at the given socketPath and links the passed channel
 // with the given bufferSize. It returns an error on failure
-func NewSocket(socketPath string, channel chan data.LocalFragmentDesc, handler ConnHandler) (s Socket, err error) {
+func NewSocket(socketPath string, channel chan transmit.Serializable, handler ConnHandler) (s Socket, err error) {
 	defer util.ReturnErrOnPanic(&err)
 	if _, errExist := os.Stat(socketPath); !os.IsNotExist(errExist) {
 		err = os.Remove(socketPath)

@@ -2,22 +2,23 @@ package store
 
 import (
 	"github.com/iterum-provenance/sidecar/data"
+	"github.com/iterum-provenance/sidecar/transmit"
 	"github.com/minio/minio-go/v6"
 	"github.com/prometheus/common/log"
 )
 
 // Uploader is a struct responsible for uploading a single fragment to the minio client
 type Uploader struct {
-	Completed        map[string]string            // maps the name to the LocalPath, "" means unuploaded
-	NotifyComplete   chan data.RemoteFileDesc     // Channel to notify uploader of individual file completion
-	NotifyManager    chan data.RemoteFragmentDesc // Channel to notify upload_manager of fragment completion
+	Completed        map[string]string          // maps the name to the LocalPath, "" means unuploaded
+	NotifyComplete   chan data.RemoteFileDesc   // Channel to notify uploader of individual file completion
+	NotifyManager    chan transmit.Serializable // Channel to notify upload_manager of fragment completion
 	UploadDescriptor data.LocalFragmentDesc
 	Client           *minio.Client
 	Bucket           string
 }
 
 // NewUploader creates a new Uploader instance that will upload the passed fragment description
-func NewUploader(msg data.LocalFragmentDesc, client *minio.Client, manager chan data.RemoteFragmentDesc, targetBucket string) Uploader {
+func NewUploader(msg data.LocalFragmentDesc, client *minio.Client, manager chan transmit.Serializable, targetBucket string) Uploader {
 	completed := make(map[string]string)
 	for _, file := range msg.Files {
 		completed[file.Name] = ""
@@ -53,7 +54,7 @@ func (u Uploader) completionTracker() {
 	}
 	rfd := data.RemoteFragmentDesc{Files: files}
 	log.Infoln("Fragment uploaded")
-	u.NotifyManager <- rfd
+	u.NotifyManager <- &rfd
 }
 
 func (u Uploader) upload(descriptor data.LocalFileDesc) {
