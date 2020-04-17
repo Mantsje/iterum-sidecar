@@ -61,6 +61,6 @@ func (s Socket) Start() {
 }
 
 // Stop tries to close the listener of the socket and returns an error on failure
-func (s Socket) Stop() error {
+func (s *Socket) Stop() error {
 	return s.Listener.Close()
 }
