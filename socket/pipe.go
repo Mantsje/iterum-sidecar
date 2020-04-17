@@ -9,24 +9,24 @@ import (
 // ToTarget and FromTarget refer to the channels in the two sockets
 // Messages supposed to go towards Target can be put on ToTarget and message from the Target are put on FromTarget
 type Pipe struct {
-	SocketTo   Socket
 	SocketFrom Socket
-	ToTarget   chan transmit.Serializable
+	SocketTo   Socket
 	FromTarget chan transmit.Serializable
+	ToTarget   chan transmit.Serializable
 }
 
 // NewPipe creates and initiates a new Pipe
 func NewPipe(fromFile, toFile string, fromChannel, toChannel chan transmit.Serializable, fromHandler, toHandler ConnHandler) Pipe {
-	toSocket, err := NewSocket(toFile, toChannel, toHandler)
-	util.Ensure(err, "Towards Socket succesfully opened and listening")
 	fromSocket, err := NewSocket(fromFile, fromChannel, fromHandler)
 	util.Ensure(err, "From Socket succesfully opened and listening")
+	toSocket, err := NewSocket(toFile, toChannel, toHandler)
+	util.Ensure(err, "Towards Socket succesfully opened and listening")
 
-	return Pipe{toSocket, fromSocket, toSocket.Channel, fromSocket.Channel}
+	return Pipe{fromSocket, toSocket, fromSocket.Channel, toSocket.Channel}
 }
 
 // Start calls start on both of the pipe's sockets
 func (p Pipe) Start() {
-	p.SocketTo.Start()
 	p.SocketFrom.Start()
+	p.SocketTo.Start()
 }
