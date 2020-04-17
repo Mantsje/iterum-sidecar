@@ -16,10 +16,10 @@ type Pipe struct {
 }
 
 // NewPipe creates and initiates a new Pipe
-func NewPipe(fromFile, toFile string, input, output chan transmit.Serializable, fromHandler, toHandler ConnHandler) Pipe {
-	toSocket, err := NewSocket(toFile, input, toHandler)
+func NewPipe(fromFile, toFile string, fromChannel, toChannel chan transmit.Serializable, fromHandler, toHandler ConnHandler) Pipe {
+	toSocket, err := NewSocket(toFile, toChannel, toHandler)
 	util.Ensure(err, "Towards Socket succesfully opened and listening")
-	fromSocket, err := NewSocket(fromFile, output, fromHandler)
+	fromSocket, err := NewSocket(fromFile, fromChannel, fromHandler)
 	util.Ensure(err, "From Socket succesfully opened and listening")
 
 	return Pipe{toSocket, fromSocket, toSocket.Channel, fromSocket.Channel}
