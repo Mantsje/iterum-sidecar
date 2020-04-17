@@ -46,11 +46,11 @@ func NewSocket(socketPath string, channel chan transmit.Serializable, handler Co
 func (s Socket) StartBlocking() {
 	for {
 		conn, err := s.Listener.Accept()
-		defer conn.Close()
 		if err != nil {
 			log.Warnln("Connection failed")
 			return
 		}
+		defer conn.Close()
 		go s.handler(s, conn)
 	}
 }
@@ -58,4 +58,9 @@ func (s Socket) StartBlocking() {
 // Start asychronously calls StartBlocking via Gorouting
 func (s Socket) Start() {
 	go s.StartBlocking()
+}
+
+// Stop tries to close the listener of the socket and returns an error on failure
+func (s Socket) Stop() error {
+	return s.Listener.Close()
 }
