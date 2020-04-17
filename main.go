@@ -45,12 +45,16 @@ func main() {
 	uploadManager := store.NewUploadManager(socketUploaderBridge, uploaderMqBridge)
 	uploadManager.Start()
 
+	brokerURL := os.Getenv("BROKER_URL")
+	outputQueue := os.Getenv("OUTPUT_QUEUE")
+	inputQueue := os.Getenv("INPUT_QUEUE")
+
 	// MessageQueue setup
-	mqListener, err := messageq.NewListener(mqDownloaderBridge)
+	mqListener, err := messageq.NewListener(mqDownloaderBridge, brokerURL, inputQueue)
 	util.Ensure(err, "MessageQueue listener succesfully created and listening")
 	mqListener.Start()
 
-	mqSender, err := messageq.NewSender(uploaderMqBridge)
+	mqSender, err := messageq.NewSender(uploaderMqBridge, brokerURL, outputQueue)
 	util.Ensure(err, "MessageQueue sender succesfully created and listening")
 	mqSender.Start()
 

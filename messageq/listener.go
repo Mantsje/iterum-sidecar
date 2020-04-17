@@ -2,7 +2,6 @@ package messageq
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/prometheus/common/log"
 
@@ -13,14 +12,18 @@ import (
 
 // Listener is the structure that listens to RabbitMQ and redirects messages to a channel
 type Listener struct {
-	MqOutput chan<- transmit.Serializable // data.RemoteFragmentDesc
+	MqOutput    chan<- transmit.Serializable // data.RemoteFragmentDesc
+	BrokerURL   string
+	TargetQueue string
 }
 
 // NewListener creates a new message queue listener
-func NewListener(channel chan<- transmit.Serializable) (listener Listener, err error) {
+func NewListener(channel chan<- transmit.Serializable, brokerURL, inputQueue string) (listener Listener, err error) {
 
 	listener = Listener{
 		channel,
+		brokerURL,
+		inputQueue,
 	}
 	return
 }
@@ -28,8 +31,8 @@ func NewListener(channel chan<- transmit.Serializable) (listener Listener, err e
 // StartBlocking listens on the rabbitMQ messagequeue and redirects messages on the INPUT_QUEUE to a channel
 func (listener Listener) StartBlocking() {
 
-	fmt.Printf("Connecting to %s.\n", os.Getenv("BROKER_URL"))
-	conn, err := amqp.Dial(os.Getenv("BROKER_URL"))
+	fmt.Printf("Connecting to %s.\n", listener.BrokerURL)
+	conn, err := amqp.Dial(listener.BrokerURL)
 	util.Ensure(err, "Connected to RabbitMQ")
 	defer conn.Close()
 
@@ -38,12 +41,12 @@ func (listener Listener) StartBlocking() {
 	defer ch.Close()
 
 	q, err := ch.QueueDeclare(
-		os.Getenv("INPUT_QUEUE"), // name
-		false,                    // durable
-		false,                    // delete when unused
-		false,                    // exclusive
-		false,                    // no-wait
-		nil,                      // arguments
+		listener.TargetQueue, // name
+		false,                // durable
+		false,                // delete when unused
+		false,                // exclusive
+		false,                // no-wait
+		nil,                  // arguments
 	)
 	util.Ensure(err, "Created queue")
 
