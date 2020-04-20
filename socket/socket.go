@@ -49,17 +49,19 @@ func NewSocket(socketPath string, channel chan transmit.Serializable, handler Co
 func (s Socket) StartBlocking() {
 	for {
 		conn, err := s.Listener.Accept()
-		_, close := <-s.stop
-		if close && err != nil {
+		select {
+		case <-s.stop:
 			// If we were told to stop (an error would occur, but this is expected)
 			return
-		} else if err != nil {
-			// If we weren told to stop but an error occurred
-			log.Errorln(err)
-			return
+		default:
+			if err != nil {
+				// If we weren't told to stop but an error occurred
+				log.Errorln(err)
+				return
+			}
+			defer conn.Close()
+			go s.handler(s, conn)
 		}
-		defer conn.Close()
-		go s.handler(s, conn)
 	}
 }
 
