@@ -67,6 +67,6 @@ func (s Socket) Start(wg *sync.WaitGroup) {
 
 // Stop tries to close the listener of the socket and returns an error on failure
 func (s *Socket) Stop() error {
-	log.Warnln("Closing socket server...")
+	log.Infoln("Stopping socket server... (ignore upcoming failure of connection accepting)")
 	return s.Listener.Close()
 }
