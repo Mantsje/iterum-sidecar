@@ -17,6 +17,7 @@ type Socket struct {
 	Listener net.Listener
 	Channel  chan transmit.Serializable
 	handler  ConnHandler
+	stop     chan bool
 }
 
 // ConnHandler is a handler function ran in a goroutine upon a socket accepting a new connection
@@ -38,6 +39,7 @@ func NewSocket(socketPath string, channel chan transmit.Serializable, handler Co
 		listener,
 		channel,
 		handler,
+		make(chan bool, 1),
 	}
 	return
 }
@@ -47,8 +49,13 @@ func NewSocket(socketPath string, channel chan transmit.Serializable, handler Co
 func (s Socket) StartBlocking() {
 	for {
 		conn, err := s.Listener.Accept()
-		if err != nil {
-			log.Warnln("Accepting connection(s) failed")
+		_, close := <-s.stop
+		if close && err != nil {
+			// If we were told to stop (an error would occur, but this is expected)
+			return
+		} else if err != nil {
+			// If we weren told to stop but an error occurred
+			log.Errorln(err)
 			return
 		}
 		defer conn.Close()
@@ -67,6 +74,7 @@ func (s Socket) Start(wg *sync.WaitGroup) {
 
 // Stop tries to close the listener of the socket and returns an error on failure
 func (s *Socket) Stop() error {
-	log.Infoln("Stopping socket server... (ignore upcoming failure of connection accepting)")
+	log.Infoln("Stopping socket server...")
+	s.stop <- true
 	return s.Listener.Close()
 }
