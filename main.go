@@ -2,17 +2,18 @@ package main
 
 import (
 	"os"
-	"runtime"
-
-	"github.com/iterum-provenance/sidecar/store"
-	"github.com/iterum-provenance/sidecar/transmit"
+	"sync"
 
 	"github.com/iterum-provenance/sidecar/messageq"
 	"github.com/iterum-provenance/sidecar/socket"
+	"github.com/iterum-provenance/sidecar/store"
+	"github.com/iterum-provenance/sidecar/transmit"
 	"github.com/iterum-provenance/sidecar/util"
 )
 
 func main() {
+	var wg sync.WaitGroup
+
 	mqDownloaderBridgeBufferSize := 10
 	mqDownloaderBridge := make(chan transmit.Serializable, mqDownloaderBridgeBufferSize)
 
@@ -31,19 +32,19 @@ func main() {
 
 	toSocket, err := socket.NewSocket(toSocketFile, downloaderSocketBridge, socket.SendFileHandler)
 	util.Ensure(err, "Towards Socket succesfully opened and listening")
-	toSocket.Start()
+	toSocket.Start(&wg)
 
 	fromSocket, err := socket.NewSocket(fromSocketFile, socketUploaderBridge, socket.ProcessedFileHandler)
 	util.Ensure(err, "From Socket succesfully opened and listening")
-	fromSocket.Start()
+	fromSocket.Start(&wg)
 
 	// Download manager setup
 	downloadManager := store.NewDownloadManager(mqDownloaderBridge, downloaderSocketBridge)
-	downloadManager.Start()
+	downloadManager.Start(&wg)
 
 	// Upload manager setup
 	uploadManager := store.NewUploadManager(socketUploaderBridge, uploaderMqBridge)
-	uploadManager.Start()
+	uploadManager.Start(&wg)
 
 	brokerURL := os.Getenv("BROKER_URL")
 	outputQueue := os.Getenv("OUTPUT_QUEUE")
@@ -52,11 +53,11 @@ func main() {
 	// MessageQueue setup
 	mqListener, err := messageq.NewListener(mqDownloaderBridge, brokerURL, inputQueue)
 	util.Ensure(err, "MessageQueue listener succesfully created and listening")
-	mqListener.Start()
+	mqListener.Start(&wg)
 
 	mqSender, err := messageq.NewSender(uploaderMqBridge, brokerURL, outputQueue)
 	util.Ensure(err, "MessageQueue sender succesfully created and listening")
-	mqSender.Start()
+	mqSender.Start(&wg)
 
-	runtime.Goexit()
+	wg.Wait()
 }

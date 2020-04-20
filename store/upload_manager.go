@@ -3,6 +3,7 @@ package store
 import (
 	"os"
 	"strconv"
+	"sync"
 
 	"github.com/iterum-provenance/sidecar/data"
 	"github.com/iterum-provenance/sidecar/transmit"
@@ -41,14 +42,20 @@ func NewUploadManager(toUpload, completed chan transmit.Serializable) UploadMana
 
 // StartBlocking enters an endless loop consuming LocalFragmentDesc and uploading the associated data
 func (um UploadManager) StartBlocking() {
-	for {
-		msg := <-um.ToUpload
+	var wg sync.WaitGroup
+	for msg := range um.ToUpload {
+		wg.Add(1)
 		uloader := NewUploader(*msg.(*data.LocalFragmentDesc), um.Client, um.Completed, um.Bucket)
-		go uloader.Start()
+		go uloader.Start(&wg)
 	}
+	wg.Wait()
 }
 
 // Start asychronously calls StartBlocking via a Goroutine
-func (um UploadManager) Start() {
-	go um.StartBlocking()
+func (um UploadManager) Start(wg *sync.WaitGroup) {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		um.StartBlocking()
+	}()
 }

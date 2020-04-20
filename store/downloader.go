@@ -1,6 +1,8 @@
 package store
 
 import (
+	"sync"
+
 	"github.com/iterum-provenance/sidecar/data"
 	"github.com/iterum-provenance/sidecar/transmit"
 	"github.com/minio/minio-go/v6"
@@ -38,7 +40,8 @@ func (d Downloader) IsComplete() bool {
 }
 
 // completionTracker is a function that tracks whether all downloads have completed yet
-func (d Downloader) completionTracker() {
+func (d Downloader) completionTracker(wg *sync.WaitGroup) {
+	defer wg.Done()
 	// Lazy loop and wait until all files have been downloaded
 	var files []data.LocalFileDesc
 	for !d.IsComplete() {
@@ -57,7 +60,8 @@ func (d Downloader) completionTracker() {
 	d.NotifyManager <- &lfd
 }
 
-func (d Downloader) download(descriptor data.RemoteFileDesc) {
+func (d Downloader) download(descriptor data.RemoteFileDesc, wg *sync.WaitGroup) {
+	defer wg.Done()
 	// Check to see if we already own this bucket
 	exists, errBucketExists := d.Client.BucketExists(descriptor.Bucket)
 	if errBucketExists != nil {
@@ -75,9 +79,11 @@ func (d Downloader) download(descriptor data.RemoteFileDesc) {
 }
 
 // Start enters an loop that downloads all files via the client in goroutines
-func (d Downloader) Start() {
-	go d.completionTracker()
+func (d Downloader) Start(wg *sync.WaitGroup) {
+	wg.Add(1)
+	go d.completionTracker(wg)
 	for _, file := range d.DownloadDescriptor.Files {
-		go d.download(file)
+		wg.Add(1)
+		go d.download(file, wg)
 	}
 }

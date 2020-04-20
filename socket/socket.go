@@ -3,6 +3,7 @@ package socket
 import (
 	"net"
 	"os"
+	"sync"
 
 	"github.com/iterum-provenance/sidecar/transmit"
 	"github.com/iterum-provenance/sidecar/util"
@@ -47,7 +48,7 @@ func (s Socket) StartBlocking() {
 	for {
 		conn, err := s.Listener.Accept()
 		if err != nil {
-			log.Warnln("Connection failed")
+			log.Warnln("Accepting connection(s) failed")
 			return
 		}
 		defer conn.Close()
@@ -56,11 +57,16 @@ func (s Socket) StartBlocking() {
 }
 
 // Start asychronously calls StartBlocking via Gorouting
-func (s Socket) Start() {
-	go s.StartBlocking()
+func (s Socket) Start(wg *sync.WaitGroup) {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		s.StartBlocking()
+	}()
 }
 
 // Stop tries to close the listener of the socket and returns an error on failure
 func (s *Socket) Stop() error {
+	log.Warnln("Closing socket server...")
 	return s.Listener.Close()
 }

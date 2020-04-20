@@ -2,6 +2,7 @@ package messageq
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/prometheus/common/log"
 
@@ -80,6 +81,10 @@ func (sender Sender) StartBlocking() {
 }
 
 // Start asychronously calls StartBlocking via Gorouting
-func (sender Sender) Start() {
-	go sender.StartBlocking()
+func (sender Sender) Start(wg *sync.WaitGroup) {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		sender.StartBlocking()
+	}()
 }

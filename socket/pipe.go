@@ -1,6 +1,8 @@
 package socket
 
 import (
+	"sync"
+
 	"github.com/iterum-provenance/sidecar/transmit"
 	"github.com/iterum-provenance/sidecar/util"
 )
@@ -26,7 +28,7 @@ func NewPipe(fromFile, toFile string, fromChannel, toChannel chan transmit.Seria
 }
 
 // Start calls start on both of the pipe's sockets
-func (p Pipe) Start() {
-	p.SocketFrom.Start()
-	p.SocketTo.Start()
+func (p Pipe) Start(wg *sync.WaitGroup) {
+	p.SocketFrom.Start(wg)
+	p.SocketTo.Start(wg)
 }

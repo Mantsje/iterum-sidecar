@@ -1,6 +1,8 @@
 package store
 
 import (
+	"sync"
+
 	"github.com/iterum-provenance/sidecar/data"
 	"github.com/iterum-provenance/sidecar/transmit"
 	"github.com/minio/minio-go/v6"
@@ -38,7 +40,7 @@ func (u Uploader) IsComplete() bool {
 }
 
 // completionTracker is a function that tracks whether all uploads have completed yet
-func (u Uploader) completionTracker() {
+func (u Uploader) completionTracker(wg *sync.WaitGroup) {
 	// Lazy loop and wait until all files have been uploaded
 	var files []data.RemoteFileDesc
 	for !u.IsComplete() {
@@ -55,9 +57,10 @@ func (u Uploader) completionTracker() {
 	rfd := data.RemoteFragmentDesc{Files: files}
 	log.Infoln("Fragment uploaded")
 	u.NotifyManager <- &rfd
+	wg.Done()
 }
 
-func (u Uploader) upload(descriptor data.LocalFileDesc) {
+func (u Uploader) upload(descriptor data.LocalFileDesc, wg *sync.WaitGroup) {
 	// Check to see if we already own this bucket
 	exists, errBucketExists := u.Client.BucketExists(u.Bucket)
 	if errBucketExists != nil {
@@ -76,12 +79,15 @@ func (u Uploader) upload(descriptor data.LocalFileDesc) {
 	} else {
 		u.NotifyComplete <- data.RemoteFileDesc{Name: descriptor.Name, RemotePath: descriptor.Name, Bucket: u.Bucket}
 	}
+	wg.Done()
 }
 
 // Start enters an loop that uploads all files via the client in goroutines
-func (u Uploader) Start() {
-	go u.completionTracker()
+func (u Uploader) Start(wg *sync.WaitGroup) {
+	wg.Add(1)
+	go u.completionTracker(wg)
 	for _, file := range u.UploadDescriptor.Files {
-		go u.upload(file)
+		wg.Add(1)
+		go u.upload(file, wg)
 	}
 }

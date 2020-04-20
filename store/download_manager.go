@@ -3,6 +3,7 @@ package store
 import (
 	"os"
 	"strconv"
+	"sync"
 
 	"github.com/iterum-provenance/sidecar/data"
 	"github.com/iterum-provenance/sidecar/transmit"
@@ -38,14 +39,20 @@ func NewDownloadManager(toDownload, completed chan transmit.Serializable) Downlo
 
 // StartBlocking enters an endless loop consuming RemoteFragmentDescs and downloading the associated data
 func (dm DownloadManager) StartBlocking() {
-	for {
-		msg := <-dm.ToDownload
+	var wg sync.WaitGroup
+	for msg := range dm.ToDownload {
+		wg.Add(1)
 		dloader := NewDownloader(*msg.(*data.RemoteFragmentDesc), dm.Client, dm.Completed, "./")
-		go dloader.Start()
+		go dloader.Start(&wg)
 	}
+	wg.Wait()
 }
 
 // Start asychronously calls StartBlocking via a Goroutine
-func (dm DownloadManager) Start() {
-	go dm.StartBlocking()
+func (dm DownloadManager) Start(wg *sync.WaitGroup) {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		dm.StartBlocking()
+	}()
 }
