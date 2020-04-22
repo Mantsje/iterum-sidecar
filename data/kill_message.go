@@ -12,6 +12,11 @@ type KillMessage struct {
 	Status string `json:"status"`
 }
 
+// NewKillMessage creates a new default instance of KillMessage
+func NewKillMessage() KillMessage {
+	return KillMessage{"complete"}
+}
+
 // Serialize tries to transform `km` into a json encoded bytearray. Errors on failure
 func (km *KillMessage) Serialize() (data []byte, err error) {
 	data, err = json.Marshal(km)
