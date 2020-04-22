@@ -1,6 +1,6 @@
 .PHONY: FORCE
 
-NAME=iterum-sidecar
+NAME=sidecar
 
 build: FORCE 
 	go build -o ./build/${NAME}
