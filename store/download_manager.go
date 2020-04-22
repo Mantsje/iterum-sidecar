@@ -42,7 +42,7 @@ func (dm DownloadManager) StartBlocking() {
 	var wg sync.WaitGroup
 	for msg := range dm.ToDownload {
 		wg.Add(1)
-		dloader := NewDownloader(*msg.(*data.RemoteFragmentDesc), dm.Client, dm.Completed, os.Getenv("DATA_VOLUME"))
+		dloader := NewDownloader(*msg.(*data.RemoteFragmentDesc), dm.Client, dm.Completed, os.Getenv("DATA_VOLUME_PATH"))
 		go dloader.Start(&wg)
 	}
 	wg.Wait()
