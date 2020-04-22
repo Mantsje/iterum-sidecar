@@ -28,25 +28,34 @@ func EncodeSend(conn net.Conn, obj Serializable) (err error) {
 	return
 }
 
+// ReadMessage reads one message worth of data from the passed connection.
+// it leaves the data serialized, but it is guaranteed to be of the right length
+func ReadMessage(conn net.Conn) (encMsg []byte, err error) {
+	encMsgSize := make([]byte, FragmentSizeLength)
+	_, err = conn.Read(encMsgSize)
+	if err != nil {
+		err = ErrConnection(err)
+		return
+	}
+	msgSize := int(binary.LittleEndian.Uint32(encMsgSize))
+
+	encMsg = make([]byte, msgSize)
+	_, err = conn.Read(encMsg)
+
+	if err != nil {
+		err = ErrConnection(err)
+		return
+	}
+	return encMsg, nil
+}
+
 // DecodeRead tries to decode a serialized object that was encoded
 // via the Iterum defaults as described in `transmit.Encode`
 // and Read from the passed connection
 func DecodeRead(conn net.Conn, obj Serializable) (err error) {
 	// Reading
-	encMsgSize := make([]byte, FragmentSizeLength)
-	_, err = conn.Read(encMsgSize)
-	if err != nil {
-		return ErrConnection(err)
-	}
-	msgSize := int(binary.LittleEndian.Uint32(encMsgSize))
-
-	encMsg := make([]byte, msgSize)
-	_, err = conn.Read(encMsg)
-
+	encMsg, err := ReadMessage(conn)
 	// Decoding
-	if err != nil {
-		return ErrConnection(err)
-	}
 	err = obj.Deserialize(encMsg)
 	return
 }
