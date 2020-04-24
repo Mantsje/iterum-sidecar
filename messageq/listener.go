@@ -5,10 +5,11 @@ import (
 	"sync"
 
 	"github.com/prometheus/common/log"
-
-	"github.com/iterum-provenance/sidecar/transmit"
-	"github.com/iterum-provenance/sidecar/util"
 	"github.com/streadway/amqp"
+
+	"github.com/iterum-provenance/iterum-go/util"
+
+	"github.com/iterum-provenance/iterum-go/transmit"
 )
 
 // Listener is the structure that listens to RabbitMQ and redirects messages to a channel

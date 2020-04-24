@@ -1,14 +1,17 @@
 package main
 
 import (
-	"os"
 	"sync"
 
+	envcomm "github.com/iterum-provenance/iterum-go/env"
+	"github.com/iterum-provenance/iterum-go/minio"
+	"github.com/iterum-provenance/iterum-go/util"
+
+	"github.com/iterum-provenance/iterum-go/transmit"
+	"github.com/iterum-provenance/sidecar/env"
 	"github.com/iterum-provenance/sidecar/messageq"
 	"github.com/iterum-provenance/sidecar/socket"
 	"github.com/iterum-provenance/sidecar/store"
-	"github.com/iterum-provenance/sidecar/transmit"
-	"github.com/iterum-provenance/sidecar/util"
 )
 
 func main() {
@@ -27,8 +30,8 @@ func main() {
 	uploaderMqBridge := make(chan transmit.Serializable, uploaderMqBridgeBufferSize)
 
 	// Socket setup
-	toSocketFile := os.Getenv("DATA_VOLUME_PATH") + "/tts.sock"
-	fromSocketFile := os.Getenv("DATA_VOLUME_PATH") + "/fts.sock"
+	toSocketFile := env.TransformationStepInputSocket
+	fromSocketFile := env.TransformationStepOutputSocket
 
 	toSocket, err := socket.NewSocket(toSocketFile, downloaderSocketBridge, socket.SendFileHandler)
 	util.Ensure(err, "Towards Socket succesfully opened and listening")
@@ -39,16 +42,26 @@ func main() {
 	fromSocket.Start(&wg)
 
 	// Download manager setup
-	downloadManager := store.NewDownloadManager(mqDownloaderBridge, downloaderSocketBridge)
+	minioConfigDown, err := minio.NewMinioConfigFromEnv() // defaults to an output setup
+	util.PanicIfErr(err, "")
+	minioConfigDown.TargetBucket = "INVALID" // adjust such that the target output is unusable
+	err = minioConfigDown.Connect()
+	util.PanicIfErr(err, "")
+	downloadManager := store.NewDownloadManager(minioConfigDown, mqDownloaderBridge, downloaderSocketBridge)
 	downloadManager.Start(&wg)
 
 	// Upload manager setup
-	uploadManager := store.NewUploadManager(socketUploaderBridge, uploaderMqBridge)
+	// Define and connect to minio storage
+	minioConfigUp, err := minio.NewMinioConfigFromEnv() // defaults to an output setup
+	util.PanicIfErr(err, "")
+	err = minioConfigUp.Connect()
+	util.PanicIfErr(err, "")
+	uploadManager := store.NewUploadManager(minioConfigUp, socketUploaderBridge, uploaderMqBridge)
 	uploadManager.Start(&wg)
 
-	brokerURL := os.Getenv("BROKER_URL")
-	outputQueue := os.Getenv("OUTPUT_QUEUE")
-	inputQueue := os.Getenv("INPUT_QUEUE")
+	brokerURL := envcomm.MQBrokerURL
+	outputQueue := envcomm.MQOutputQueue
+	inputQueue := envcomm.MQInputQueue
 
 	// MessageQueue setup
 	mqListener, err := messageq.NewListener(mqDownloaderBridge, brokerURL, inputQueue)

@@ -3,8 +3,9 @@ package socket
 import (
 	"sync"
 
-	"github.com/iterum-provenance/sidecar/transmit"
-	"github.com/iterum-provenance/sidecar/util"
+	"github.com/iterum-provenance/iterum-go/util"
+
+	"github.com/iterum-provenance/iterum-go/transmit"
 )
 
 // Pipe represents a bidirectional connection between an iterum sidecar and transformation step

@@ -6,9 +6,10 @@ import (
 
 	"github.com/prometheus/common/log"
 
-	"github.com/iterum-provenance/sidecar/data"
-	"github.com/iterum-provenance/sidecar/transmit"
-	"github.com/iterum-provenance/sidecar/util"
+	desc "github.com/iterum-provenance/iterum-go/descriptors"
+	"github.com/iterum-provenance/iterum-go/util"
+
+	"github.com/iterum-provenance/iterum-go/transmit"
 	"github.com/streadway/amqp"
 )
 
@@ -55,7 +56,7 @@ func (sender Sender) StartBlocking() {
 	for remoteFragment := range sender.toSend {
 
 		fmt.Printf("Received a remoteFragment to send to the queue: %s\n", remoteFragment)
-		mqFragment := newFragmentDesc(*remoteFragment.(*data.RemoteFragmentDesc))
+		mqFragment := newFragmentDesc(*remoteFragment.(*desc.RemoteFragmentDesc))
 
 		body, err := mqFragment.Serialize()
 		if err != nil {

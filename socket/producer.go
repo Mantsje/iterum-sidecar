@@ -5,8 +5,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/iterum-provenance/sidecar/data"
-	"github.com/iterum-provenance/sidecar/transmit"
+	desc "github.com/iterum-provenance/iterum-go/descriptors"
+
+	"github.com/iterum-provenance/iterum-go/transmit"
 	"github.com/prometheus/common/log"
 )
 
@@ -17,11 +18,8 @@ func SendFileHandler(socket Socket, conn net.Conn) {
 		// Wait for the next job to come off the queue.
 		msg := <-socket.Channel
 
-		// wrap general type into specific socket fragmentDesc before sending
-		lfd := fragmentDesc{*msg.(*data.LocalFragmentDesc)}
-
 		// Send the msg over the connection
-		err := transmit.EncodeSend(conn, &lfd)
+		err := transmit.EncodeSend(conn, msg)
 
 		// Error handling
 		switch err.(type) {
@@ -45,8 +43,8 @@ func Producer(channel chan transmit.Serializable) {
 	for {
 		time.Sleep(1 * time.Second)
 		dummyName := fmt.Sprintf("file%d.txt", fileIdx)
-		dummyFile := data.LocalFileDesc{LocalPath: "./input/bucket/" + dummyName, Name: dummyName}
-		dummyFiles := []data.LocalFileDesc{dummyFile}
+		dummyFile := desc.LocalFileDesc{LocalPath: "./input/bucket/" + dummyName, Name: dummyName}
+		dummyFiles := []desc.LocalFileDesc{dummyFile}
 		dummyFragmentDesc := newFragmentDesc(dummyFiles)
 		fmt.Printf("putting fragment on channel:'%v'\n", dummyFragmentDesc)
 		channel <- &dummyFragmentDesc

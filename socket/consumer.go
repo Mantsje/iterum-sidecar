@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/iterum-provenance/sidecar/transmit"
+	desc "github.com/iterum-provenance/iterum-go/descriptors"
+	"github.com/iterum-provenance/iterum-go/transmit"
+
 	"github.com/prometheus/common/log"
 )
 
@@ -12,27 +14,39 @@ import (
 func ProcessedFileHandler(socket Socket, conn net.Conn) {
 	defer conn.Close()
 	for {
-		msg := fragmentDesc{}
-		err := transmit.DecodeRead(conn, &msg)
+		encMsg, err := transmit.ReadMessage(conn)
 
-		// Error handling
-		switch err.(type) {
-		case *transmit.SerializationError:
-			log.Warnf("Could not encode message due to '%v', skipping message", err)
-			continue
-		case *transmit.ConnectionError:
-			log.Warnf("Closing connection towards due to '%v'", err)
+		if err != nil {
+			log.Warnf("Failed to read, closing connection towards due to '%v'", err)
 			return
-		default:
-			log.Errorf("%v, closing connection", err)
-			return
-		case nil:
 		}
 
-		// unwrap socket fragmentDesc into general type before posting on output
-		lfd := msg.LocalFragmentDesc
+		msg := fragmentDesc{}
+		errFrag := msg.Deserialize(encMsg)
+		doneMsg := desc.NewKillMessage()
+		errDone := doneMsg.Deserialize(encMsg)
 
-		socket.Channel <- &lfd
+		if errFrag == nil {
+			// Default behaviour
+			// unwrap socket fragmentDesc into general type before posting on output
+			lfd := msg.LocalFragmentDesc
+			socket.Channel <- &lfd
+		} else if errDone == nil {
+			log.Info("Received kill message, stopping consumer...")
+			socket.Stop()
+			close(socket.Channel)
+			return
+		} else {
+			// Error handling
+			switch errFrag.(type) {
+			case *transmit.SerializationError:
+				log.Warnf("Could not decode message due to '%v', skipping message", errFrag)
+				continue
+			default:
+				log.Errorf("'%v', closing connection", errFrag)
+				return
+			}
+		}
 	}
 }
 

@@ -3,19 +3,19 @@ package socket
 import (
 	"encoding/json"
 
-	"github.com/iterum-provenance/sidecar/data"
-	"github.com/iterum-provenance/sidecar/transmit"
+	desc "github.com/iterum-provenance/iterum-go/descriptors"
+	"github.com/iterum-provenance/iterum-go/transmit"
 )
 
 // fragmentDesc is a structure describing a local iterum fragment that
 // can be exchanged between the sidecar and the TS
 type fragmentDesc struct {
-	data.LocalFragmentDesc
+	desc.LocalFragmentDesc
 }
 
 // newFragmentDesc makes a new fragment description suited for use within socket package
-func newFragmentDesc(files []data.LocalFileDesc) fragmentDesc {
-	sfd := fragmentDesc{data.LocalFragmentDesc{}}
+func newFragmentDesc(files []desc.LocalFileDesc) fragmentDesc {
+	sfd := fragmentDesc{desc.LocalFragmentDesc{}}
 	sfd.Files = files
 	return sfd
 }

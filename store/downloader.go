@@ -3,30 +3,32 @@ package store
 import (
 	"sync"
 
-	"github.com/iterum-provenance/sidecar/data"
-	"github.com/iterum-provenance/sidecar/transmit"
-	"github.com/minio/minio-go/v6"
 	"github.com/prometheus/common/log"
+
+	desc "github.com/iterum-provenance/iterum-go/descriptors"
+	"github.com/iterum-provenance/iterum-go/minio"
+
+	"github.com/iterum-provenance/iterum-go/transmit"
 )
 
 // Downloader is a struct responsible for downloading a single fragment to local disk
 type Downloader struct {
 	Completed          map[string]string          // maps the name to the LocalPath, "" means undownloaded
-	NotifyComplete     chan data.LocalFileDesc    // Channel to notify downloader of individual file completion
+	NotifyComplete     chan desc.LocalFileDesc    // Channel to notify downloader of individual file completion
 	NotifyManager      chan transmit.Serializable // Channel to notify download_manager of fragment completion
-	DownloadDescriptor data.RemoteFragmentDesc
-	Client             *minio.Client
+	DownloadDescriptor desc.RemoteFragmentDesc
+	Minio              minio.Config
 	Folder             string
 }
 
 // NewDownloader creates a new Downloader instance that will download teh pass fragment description
-func NewDownloader(msg data.RemoteFragmentDesc, client *minio.Client, manager chan transmit.Serializable, targetFolder string) Downloader {
+func NewDownloader(msg desc.RemoteFragmentDesc, minio minio.Config, manager chan transmit.Serializable, targetFolder string) Downloader {
 	completed := make(map[string]string)
 	for _, file := range msg.Files {
 		completed[file.Name] = ""
 	}
 
-	return Downloader{completed, make(chan data.LocalFileDesc, len(msg.Files)), manager, msg, client, targetFolder}
+	return Downloader{completed, make(chan desc.LocalFileDesc, len(msg.Files)), manager, msg, minio, targetFolder}
 }
 
 // IsComplete checks whether all downloads have completed
@@ -43,7 +45,7 @@ func (d Downloader) IsComplete() bool {
 func (d Downloader) completionTracker(wg *sync.WaitGroup) {
 	defer wg.Done()
 	// Lazy loop and wait until all files have been downloaded
-	var files []data.LocalFileDesc
+	var files []desc.LocalFileDesc
 	for !d.IsComplete() {
 		dloadedFile := <-d.NotifyComplete
 		if path, ok := d.Completed[dloadedFile.Name]; !ok {
@@ -55,27 +57,19 @@ func (d Downloader) completionTracker(wg *sync.WaitGroup) {
 			files = append(files, dloadedFile)
 		}
 	}
-	lfd := data.LocalFragmentDesc{Files: files}
+	lfd := desc.LocalFragmentDesc{Files: files}
 	log.Infoln("Fragment downloaded")
 	d.NotifyManager <- &lfd
 }
 
-func (d Downloader) download(descriptor data.RemoteFileDesc, wg *sync.WaitGroup) {
+func (d Downloader) download(descriptor desc.RemoteFileDesc, wg *sync.WaitGroup) {
 	defer wg.Done()
-	// Check to see if we already own this bucket
-	exists, errBucketExists := d.Client.BucketExists(descriptor.Bucket)
-	if errBucketExists != nil {
-		log.Errorf("Download failed due to failure of bucket existence checking: '%v'\n", errBucketExists)
-	} else if !exists {
-		log.Errorf("Download failed bucket '%v' does not exist\n", descriptor.Bucket)
-	} else {
-		localFilePath := descriptor.ToLocalPath(d.Folder)
-		err := d.Client.FGetObject(descriptor.Bucket, descriptor.RemotePath, localFilePath, getOptions)
-		if err != nil {
-			log.Errorf("Download failed due to: '%v'", err)
-		}
-		d.NotifyComplete <- data.LocalFileDesc{Name: descriptor.Name, LocalPath: localFilePath}
+	localFileDesc, err := d.Minio.GetFile(descriptor, d.Folder)
+	if err != nil {
+		log.Errorf("Download failed due to: '%v'\n", err)
+		return
 	}
+	d.NotifyComplete <- localFileDesc
 }
 
 // Start enters an loop that downloads all files via the client in goroutines

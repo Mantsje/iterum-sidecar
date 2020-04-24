@@ -5,9 +5,11 @@ import (
 	"os"
 	"sync"
 
-	"github.com/iterum-provenance/sidecar/transmit"
-	"github.com/iterum-provenance/sidecar/util"
 	"github.com/prometheus/common/log"
+
+	"github.com/iterum-provenance/iterum-go/util"
+
+	"github.com/iterum-provenance/iterum-go/transmit"
 )
 
 // Socket is a structure holding a listener, accepting connections
