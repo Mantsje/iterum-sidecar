@@ -1,12 +1,13 @@
 package env
 
 import (
-	"log"
 	"os"
 	"strings"
 
 	"github.com/iterum-provenance/iterum-go/env"
 	"github.com/iterum-provenance/iterum-go/util"
+	"github.com/iterum-provenance/sidecar/env/config"
+	"github.com/prometheus/common/log"
 )
 
 const (
@@ -19,6 +20,9 @@ var TransformationStepInputSocket = env.DataVolumePath + "/" + os.Getenv(inputSo
 
 // TransformationStepOutputSocket is the path to the socket used for transformation step output
 var TransformationStepOutputSocket = env.DataVolumePath + "/" + os.Getenv(outputSocketEnv)
+
+// SidecarConfig , if it exists, contains additional configuration information for the sidecar
+var SidecarConfig *config.Config = nil
 
 // VerifySidecarEnvs checks whether each of the environment variables returned a non-empty value
 func VerifySidecarEnvs() error {
@@ -40,4 +44,16 @@ func init() {
 	if err != nil {
 		log.Fatalln(err)
 	}
+
+	if env.ProcessConfig == "" {
+		log.Infoln("Sidecar was initialized without additional config, make sure that this was intended")
+	} else {
+		c := config.Config{}
+		errConfig := c.FromString(env.ProcessConfig)
+		if errConfig != nil {
+			log.Fatalln(err)
+		}
+		SidecarConfig = &c
+	}
+
 }
