@@ -41,6 +41,7 @@ func (u Uploader) IsComplete() bool {
 
 // completionTracker is a function that tracks whether all uploads have completed yet
 func (u Uploader) completionTracker(wg *sync.WaitGroup) {
+	defer wg.Done()
 	// Lazy loop and wait until all files have been uploaded
 	var files []desc.RemoteFileDesc
 	for !u.IsComplete() {
@@ -55,18 +56,16 @@ func (u Uploader) completionTracker(wg *sync.WaitGroup) {
 		}
 	}
 	rfd := desc.RemoteFragmentDesc{Files: files}
-	log.Infoln("Fragment uploaded")
 	u.NotifyManager <- &rfd
-	wg.Done()
 }
 
 func (u Uploader) upload(descriptor desc.LocalFileDesc, wg *sync.WaitGroup) {
+	defer wg.Done()
 	remoteFile, err := u.Minio.PutFile(descriptor)
 	if err != nil {
 		log.Errorf("Upload failed due to: '%v'\n", err)
 	}
 	u.NotifyComplete <- remoteFile
-	wg.Done()
 }
 
 // Start enters an loop that uploads all files via the client in goroutines

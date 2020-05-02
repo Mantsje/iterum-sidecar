@@ -33,20 +33,21 @@ func ProcessedFileHandler(socket Socket, conn net.Conn) {
 			socket.Channel <- &lfd
 		} else if errDone == nil {
 			log.Info("Received kill message, stopping consumer...")
-			socket.Stop()
-			close(socket.Channel)
+			defer socket.Stop()
+			defer close(socket.Channel)
 			return
 		} else {
 			// Error handling
 			switch errFrag.(type) {
 			case *transmit.SerializationError:
-				log.Warnf("Could not decode message due to '%v', skipping message", errFrag)
+				log.Fatalf("Could not decode message due to '%v'", errFrag)
 				continue
 			default:
 				log.Errorf("'%v', closing connection", errFrag)
 				return
 			}
 		}
+
 	}
 }
 

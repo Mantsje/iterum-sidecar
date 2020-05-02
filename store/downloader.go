@@ -58,7 +58,6 @@ func (d Downloader) completionTracker(wg *sync.WaitGroup) {
 		}
 	}
 	lfd := desc.LocalFragmentDesc{Files: files}
-	log.Infoln("Fragment downloaded")
 	d.NotifyManager <- &lfd
 }
 
@@ -80,4 +79,5 @@ func (d Downloader) Start(wg *sync.WaitGroup) {
 		wg.Add(1)
 		go d.download(file, wg)
 	}
+
 }

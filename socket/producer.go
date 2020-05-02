@@ -16,7 +16,12 @@ func SendFileHandler(socket Socket, conn net.Conn) {
 	defer conn.Close()
 	for {
 		// Wait for the next job to come off the queue.
-		msg := <-socket.Channel
+		msg, ok := <-socket.Channel
+
+		if !ok { // channel was closed
+			killMsg := desc.NewKillMessage()
+			msg = &killMsg
+		}
 
 		// Send the msg over the connection
 		err := transmit.EncodeSend(conn, msg)
@@ -33,6 +38,11 @@ func SendFileHandler(socket Socket, conn net.Conn) {
 			log.Errorf("%v, closing connection", err)
 			return
 		case nil:
+		}
+
+		if !ok {
+			socket.Stop()
+			break
 		}
 	}
 }

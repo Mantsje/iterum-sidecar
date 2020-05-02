@@ -9,6 +9,7 @@ import (
 
 	"github.com/iterum-provenance/iterum-go/transmit"
 	"github.com/iterum-provenance/sidecar/env"
+	"github.com/iterum-provenance/sidecar/manager"
 	"github.com/iterum-provenance/sidecar/messageq"
 	"github.com/iterum-provenance/sidecar/socket"
 	"github.com/iterum-provenance/sidecar/store"
@@ -71,6 +72,10 @@ func main() {
 	mqSender, err := messageq.NewSender(uploaderMqBridge, brokerURL, outputQueue)
 	util.Ensure(err, "MessageQueue sender succesfully created and listening")
 	mqSender.Start(&wg)
+
+	usChecker := manager.NewUpstreamChecker(envcomm.ManagerURL, envcomm.PipelineHash, envcomm.ProcessName, 5)
+	usChecker.Start(&wg)
+	usChecker.Register <- mqListener.CanExit
 
 	wg.Wait()
 }

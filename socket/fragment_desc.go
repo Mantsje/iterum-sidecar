@@ -2,6 +2,7 @@ package socket
 
 import (
 	"encoding/json"
+	"errors"
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/iterum-provenance/iterum-go/transmit"
@@ -34,6 +35,9 @@ func (sfd *fragmentDesc) Deserialize(data []byte) (err error) {
 	err = json.Unmarshal(data, sfd)
 	if err != nil {
 		err = transmit.ErrSerialization(err)
+	}
+	if len(sfd.Files) == 0 {
+		err = transmit.ErrSerialization(errors.New("FragmentDescription cannot contain 0 files"))
 	}
 	return
 }

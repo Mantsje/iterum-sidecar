@@ -18,6 +18,7 @@ type Sender struct {
 	toSend      <-chan transmit.Serializable // data.RemoteFragmentDesc
 	TargetQueue string
 	BrokerURL   string
+	fragments   int
 }
 
 // NewSender creates a new sender which receives messages from a channel and sends them on the message queue.
@@ -27,6 +28,7 @@ func NewSender(toSend <-chan transmit.Serializable, brokerURL, targetQueue strin
 		toSend,
 		targetQueue,
 		brokerURL,
+		0,
 	}
 	return
 }
@@ -53,9 +55,13 @@ func (sender Sender) StartBlocking() {
 	)
 	util.Ensure(err, "Created queue")
 
-	for remoteFragment := range sender.toSend {
+	for {
+		remoteFragment, ok := <-sender.toSend
+		if !ok {
+			break
+		}
 
-		fmt.Printf("Received a remoteFragment to send to the queue: %s\n", remoteFragment)
+		log.Debugf("Received a remoteFragment to send to the queue: %s\n", remoteFragment)
 		mqFragment := newFragmentDesc(*remoteFragment.(*desc.RemoteFragmentDesc))
 
 		body, err := mqFragment.Serialize()
@@ -76,9 +82,10 @@ func (sender Sender) StartBlocking() {
 		if err != nil {
 			log.Errorln(err)
 		}
+		sender.fragments++
 	}
-	fmt.Printf("Processed all messages...\n")
 
+	sender.Stop()
 }
 
 // Start asychronously calls StartBlocking via Gorouting
@@ -88,4 +95,9 @@ func (sender Sender) Start(wg *sync.WaitGroup) {
 		defer wg.Done()
 		sender.StartBlocking()
 	}()
+}
+
+// Stop finishes up and notifies the user of its progress
+func (sender Sender) Stop() {
+	log.Infof("MQSender finishing up, published %v messages\n", sender.fragments)
 }
