@@ -55,7 +55,7 @@ func (u Uploader) completionTracker(wg *sync.WaitGroup) {
 			files = append(files, uloadedFile)
 		}
 	}
-	rfd := desc.RemoteFragmentDesc{Files: files}
+	rfd := desc.RemoteFragmentDesc{Files: files, Metadata: toRemoteMetadata(u.UploadDescriptor.Metadata)}
 	u.NotifyManager <- &rfd
 }
 

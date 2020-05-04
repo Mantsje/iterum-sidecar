@@ -57,7 +57,7 @@ func (d Downloader) completionTracker(wg *sync.WaitGroup) {
 			files = append(files, dloadedFile)
 		}
 	}
-	lfd := desc.LocalFragmentDesc{Files: files}
+	lfd := desc.LocalFragmentDesc{Files: files, Metadata: toLocalMetadata(d.DownloadDescriptor.Metadata)}
 	d.NotifyManager <- &lfd
 }
 

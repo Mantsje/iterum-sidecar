@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 )
 
 // Config is the struct holding configurable information
@@ -24,4 +25,18 @@ func (conf *Config) FromString(stringified string) (err error) {
 func (conf Config) Validate() error {
 
 	return nil
+}
+
+// MapQueue tries to map a transformation step output to a target MQ.
+// If either the map is nil or the key does not exist it returns an error
+func (conf Config) MapQueue(queue string) (target string, err error) {
+	if conf.QueueMapping == nil {
+		err = errors.New("QueueMapping is nil")
+		return
+	}
+	target, ok := conf.QueueMapping[queue]
+	if !ok {
+		err = errors.New("Target queue not in QueueMapping")
+	}
+	return
 }

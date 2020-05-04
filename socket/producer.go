@@ -25,7 +25,6 @@ func SendFileHandler(socket Socket, conn net.Conn) {
 
 		// Send the msg over the connection
 		err := transmit.EncodeSend(conn, msg)
-
 		// Error handling
 		switch err.(type) {
 		case *transmit.SerializationError:

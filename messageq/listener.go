@@ -41,7 +41,7 @@ func (listener *Listener) handleRemoteFragment(message amqp.Delivery) {
 	if err != nil {
 		log.Errorln(err)
 	}
-	log.Debugf("Received a mqFragment: %s\n", mqFragment)
+	log.Debugf("Received a mqFragment: %v\n", mqFragment)
 	var remoteFragment = mqFragment.RemoteFragmentDesc
 
 	listener.MqOutput <- &remoteFragment
