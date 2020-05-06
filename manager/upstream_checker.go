@@ -97,8 +97,8 @@ func (checker UpstreamChecker) periodicCheck(wg *sync.WaitGroup, interval int) {
 	url := checker.ManagerURL + "/pipeline/" + checker.PipelineHash + "/" + checker.ProcessName + "/upstream_finished"
 	for {
 		newState := upstreamState{}
-		// err := _getData(url, &newState)
-		err := dummyCheck(url, &newState)
+		err := _getData(url, &newState)
+		//err := dummyCheck(url, &newState)
 		if err != nil {
 			handleErr(err)
 			continue

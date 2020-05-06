@@ -68,12 +68,23 @@ func (u Uploader) upload(descriptor desc.LocalFileDesc, wg *sync.WaitGroup) {
 	u.NotifyComplete <- remoteFile
 }
 
-// Start enters an loop that uploads all files via the client in goroutines
-func (u Uploader) Start(wg *sync.WaitGroup) {
+// StartBlocking starts a tracker and the uploading process of each of the files
+func (u Uploader) StartBlocking() {
+	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go u.completionTracker(wg)
 	for _, file := range u.UploadDescriptor.Files {
 		wg.Add(1)
 		go u.upload(file, wg)
 	}
+	wg.Wait()
+}
+
+// Start asychronously calls StartBlocking via a Goroutine
+func (u Uploader) Start(wg *sync.WaitGroup) {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		u.StartBlocking()
+	}()
 }

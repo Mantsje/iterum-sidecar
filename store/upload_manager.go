@@ -12,16 +12,17 @@ import (
 
 // UploadManager is the structure that consumes LocalFragmentDesc structures and uploads them to minio
 type UploadManager struct {
-	ToUpload  chan transmit.Serializable // desc.LocalFragmentDesc
-	Completed chan transmit.Serializable // desc.RemoteFragmentDesc
-	Minio     minio.Config
-	fragments int
+	ToUpload       chan transmit.Serializable // desc.LocalFragmentDesc
+	Completed      chan transmit.Serializable // desc.RemoteFragmentDesc
+	Minio          minio.Config
+	fragments      int
+	strictOrdering bool
 }
 
 // NewUploadManager creates a new upload manager and initiates a client of the Minio service
 func NewUploadManager(minio minio.Config, toUpload, completed chan transmit.Serializable) UploadManager {
 
-	return UploadManager{toUpload, completed, minio, 0}
+	return UploadManager{toUpload, completed, minio, 0, true}
 }
 
 // StartBlocking enters an endless loop consuming LocalFragmentDesc and uploading the associated data
@@ -32,9 +33,14 @@ func (um UploadManager) StartBlocking() {
 		if !ok {
 			break
 		}
-
 		uloader := NewUploader(*msg.(*desc.LocalFragmentDesc), um.Minio, um.Completed)
-		uloader.Start(&wg)
+
+		if um.strictOrdering {
+			uloader.StartBlocking()
+		} else {
+			uloader.Start(&wg)
+		}
+
 		um.fragments++
 	}
 	wg.Wait()

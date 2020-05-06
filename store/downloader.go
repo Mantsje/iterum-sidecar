@@ -71,13 +71,23 @@ func (d Downloader) download(descriptor desc.RemoteFileDesc, wg *sync.WaitGroup)
 	d.NotifyComplete <- localFileDesc
 }
 
-// Start enters an loop that downloads all files via the client in goroutines
-func (d Downloader) Start(wg *sync.WaitGroup) {
+// StartBlocking starts a tracker and the downloading process of each of the files
+func (d Downloader) StartBlocking() {
+	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go d.completionTracker(wg)
 	for _, file := range d.DownloadDescriptor.Files {
 		wg.Add(1)
 		go d.download(file, wg)
 	}
+	wg.Wait()
+}
 
+// Start asychronously calls StartBlocking via a Goroutine
+func (d Downloader) Start(wg *sync.WaitGroup) {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		d.StartBlocking()
+	}()
 }
