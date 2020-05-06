@@ -22,7 +22,7 @@ type UploadManager struct {
 // NewUploadManager creates a new upload manager and initiates a client of the Minio service
 func NewUploadManager(minio minio.Config, toUpload, completed chan transmit.Serializable) UploadManager {
 
-	return UploadManager{toUpload, completed, minio, 0, true}
+	return UploadManager{toUpload, completed, minio, 0, false}
 }
 
 // StartBlocking enters an endless loop consuming LocalFragmentDesc and uploading the associated data

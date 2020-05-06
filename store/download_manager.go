@@ -22,7 +22,7 @@ type DownloadManager struct {
 
 // NewDownloadManager creates a new downloadmanager and initiates a client of the Minio service
 func NewDownloadManager(minio minio.Config, toDownload, completed chan transmit.Serializable) DownloadManager {
-	return DownloadManager{toDownload, completed, minio, 0, true}
+	return DownloadManager{toDownload, completed, minio, 0, false}
 }
 
 // StartBlocking enters an endless loop consuming RemoteFragmentDescs and downloading the associated data
