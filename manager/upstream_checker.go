@@ -2,6 +2,9 @@ package manager
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"sync"
 	"time"
@@ -59,12 +62,33 @@ func (checker UpstreamChecker) notify() {
 // it is returned
 func _getData(url string, target interface{}) (err error) {
 	defer util.ReturnErrOnPanic(&err)
-	resp, err := http.Get(url)
-	util.PanicIfErr(err, "")
-	data := make([]byte, resp.ContentLength)
-	_, err = resp.Body.Read(data)
-	util.PanicIfErr(err, "")
-	err = json.Unmarshal(data, target)
+	var client http.Client
+
+	resp, err := client.Get(url)
+	util.PanicIfErr(err, fmt.Sprintf("Get request to manager failed due to '%v'", err))
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.New("Getting upstream state from manager did not return 'StatusOK'")
+	}
+	// version 1
+	// data := make([]byte, resp.ContentLength)
+	// _, err = resp.Body.Read(data)
+	// err = json.Unmarshal(data, target)
+
+	// version 2
+	// err = json.NewDecoder(resp.Body).Decode(target)
+	// util.PanicIfErr(err, fmt.Sprintf("Reading response body failed due to: '%v'", err))
+
+	//version 3
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	util.PanicIfErr(err, fmt.Sprintf("Reading response body failed due to: '%v'", err))
+	bodyString := string(bodyBytes)
+	log.Info(bodyString)
+
+	err = json.Unmarshal(bodyBytes, target)
+	util.PanicIfErr(err, fmt.Sprintf("Parsing response body failed due to: '%v'", err))
+
 	return
 }
 
@@ -97,6 +121,7 @@ func (checker UpstreamChecker) periodicCheck(wg *sync.WaitGroup, interval int) {
 	url := checker.ManagerURL + "/pipeline/" + checker.PipelineHash + "/" + checker.ProcessName + "/upstream_finished"
 	for {
 		newState := upstreamState{}
+		log.Infof("Url: %s\n", url)
 		err := _getData(url, &newState)
 		//err := dummyCheck(url, &newState)
 		if err != nil {
