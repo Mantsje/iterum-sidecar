@@ -11,43 +11,49 @@ import (
 )
 
 // ProcessedFileHandler is a handler for a socket that receives processed files from the transformation step
-func ProcessedFileHandler(socket Socket, conn net.Conn) {
-	defer conn.Close()
-	for {
-		encMsg, err := transmit.ReadMessage(conn)
-
-		if err != nil {
-			log.Warnf("Failed to read, closing connection towards due to '%v'", err)
-			return
-		}
-
-		msg := fragmentDesc{}
-		errFrag := msg.Deserialize(encMsg)
-		doneMsg := desc.NewKillMessage()
-		errDone := doneMsg.Deserialize(encMsg)
-
-		if errFrag == nil {
-			// Default behaviour
-			// unwrap socket fragmentDesc into general type before posting on output
-			lfd := msg.LocalFragmentDesc
-			socket.Channel <- &lfd
-		} else if errDone == nil {
-			log.Info("Received kill message, stopping consumer...")
-			defer socket.Stop()
-			defer close(socket.Channel)
-			return
-		} else {
-			// Error handling
-			switch errFrag.(type) {
-			case *transmit.SerializationError:
-				log.Fatalf("Could not decode message due to '%v'", errFrag)
-				continue
-			default:
-				log.Errorf("'%v', closing connection", errFrag)
+func ProcessedFileHandler(acknowledger chan transmit.Serializable) func(socket Socket, conn net.Conn) {
+	return func(socket Socket, conn net.Conn) {
+		defer conn.Close()
+		for {
+			encMsg, err := transmit.ReadMessage(conn)
+			if err != nil {
+				log.Warnf("Failed to read, closing connection towards due to '%v'", err)
 				return
 			}
-		}
 
+			fragMsg := fragmentDesc{}
+			errFrag := fragMsg.Deserialize(encMsg)
+			doneMsg := desc.FinishedFragmentMessage{}
+			errDone := doneMsg.Deserialize(encMsg)
+			killMsg := desc.KillMessage{}
+			errKill := killMsg.Deserialize(encMsg)
+
+			if errFrag == nil {
+				// Default behaviour
+				// unwrap socket fragmentDesc into general type before posting on output
+				lfd := fragMsg.LocalFragmentDesc
+				socket.Channel <- &lfd
+			} else if errDone == nil {
+				acknowledger <- &doneMsg
+			} else if errKill == nil {
+				log.Info("Received kill message, stopping consumer...")
+				defer socket.Stop()
+				defer close(socket.Channel)
+				defer close(acknowledger)
+				return
+			} else {
+				// Error handling
+				switch errFrag.(type) {
+				case *transmit.SerializationError:
+					log.Fatalf("Could not decode message due to '%v'", errFrag)
+					continue
+				default:
+					log.Errorf("'%v', closing connection", errFrag)
+					return
+				}
+			}
+
+		}
 	}
 }
 

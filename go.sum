@@ -25,6 +25,10 @@ github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1 h1:EGx4pi6eqNxGa
 github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1/go.mod h1:wJfORRmW1u3UXTncJ5qlYoELFm8eSnnEO6hX4iZ3EWY=
 github.com/iterum-provenance/iterum-go v0.0.8 h1:FFoNqkEYu+xbQ8gfJkcmgqpzHqVb97+kNTCcymwzZVc=
 github.com/iterum-provenance/iterum-go v0.0.8/go.mod h1:lBD1WJMbMZRRJT9ZZsLqMhY5wePnk0Gxu5CmPAbMzVg=
+github.com/iterum-provenance/iterum-go v0.0.9 h1:vxf7xSG/0C2plK47hPEj097TigAISmehE8DAUxvItl8=
+github.com/iterum-provenance/iterum-go v0.0.9/go.mod h1:lBD1WJMbMZRRJT9ZZsLqMhY5wePnk0Gxu5CmPAbMzVg=
+github.com/iterum-provenance/iterum-go v0.0.10 h1:VaCLwN3J1xMZL21jrAuR9kqyGIz32Rs7h638Ef7Uop4=
+github.com/iterum-provenance/iterum-go v0.0.10/go.mod h1:lBD1WJMbMZRRJT9ZZsLqMhY5wePnk0Gxu5CmPAbMzVg=
 github.com/json-iterator/go v1.1.6/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=
 github.com/jtolds/gls v4.20.0+incompatible h1:xdiiI2gbIgH/gLH7ADydsJ1uDOEzR8yvV7C0MuV77Wo=
 github.com/jtolds/gls v4.20.0+incompatible/go.mod h1:QJZ7F/aHp+rZTRtaJ1ow/lLfFfVYBRgL+9YlvaHOwJU=

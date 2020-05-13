@@ -13,12 +13,13 @@ import (
 
 // Listener is the structure that listens to RabbitMQ and redirects messages to a channel
 type Listener struct {
-	MqOutput    chan<- transmit.Serializable // data.RemoteFragmentDesc
-	BrokerURL   string
-	TargetQueue string
-	CanExit     chan bool
-	exit        chan bool
-	fragments   int
+	MqOutput      chan<- transmit.Serializable // data.RemoteFragmentDesc
+	ToAcknowledge chan amqp.Delivery
+	BrokerURL     string
+	TargetQueue   string
+	CanExit       chan bool
+	exit          chan bool
+	fragments     int
 }
 
 // NewListener creates a new message queue listener
@@ -26,6 +27,7 @@ func NewListener(channel chan<- transmit.Serializable, brokerURL, inputQueue str
 
 	listener = Listener{
 		channel,
+		make(chan amqp.Delivery, 10),
 		brokerURL,
 		inputQueue,
 		make(chan bool, 1),
@@ -45,6 +47,7 @@ func (listener *Listener) handleRemoteFragment(message amqp.Delivery) {
 	var remoteFragment = mqFragment.RemoteFragmentDesc
 
 	listener.MqOutput <- &remoteFragment
+	listener.ToAcknowledge <- message
 }
 
 func (listener *Listener) messagesLeftChecker(ch *amqp.Channel) {
@@ -88,7 +91,7 @@ func (listener *Listener) StartBlocking() {
 	mqMessages, err := ch.Consume(
 		q.Name, // queue
 		"",     // consumer
-		true,   // auto-ack
+		false,  // auto-ack
 		false,  // exclusive
 		false,  // no-local
 		false,  // no-wait

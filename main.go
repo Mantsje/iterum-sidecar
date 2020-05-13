@@ -30,15 +30,18 @@ func main() {
 	uploaderMqBridgeBufferSize := 10
 	uploaderMqBridge := make(chan transmit.Serializable, uploaderMqBridgeBufferSize)
 
+	socketAcknowledgerBridgeBufferSize := 10
+	socketAcknowledgerBridge := make(chan transmit.Serializable, socketAcknowledgerBridgeBufferSize)
+
 	// Socket setup
 	toSocketFile := env.TransformationStepInputSocket
 	fromSocketFile := env.TransformationStepOutputSocket
 
-	toSocket, err := socket.NewSocket(toSocketFile, downloaderSocketBridge, socket.SendFileHandler)
+	toSocket, err := socket.NewSocket(toSocketFile, downloaderSocketBridge, socket.SendFileHandler())
 	util.Ensure(err, "Towards Socket succesfully opened and listening")
 	toSocket.Start(&wg)
 
-	fromSocket, err := socket.NewSocket(fromSocketFile, socketUploaderBridge, socket.ProcessedFileHandler)
+	fromSocket, err := socket.NewSocket(fromSocketFile, socketUploaderBridge, socket.ProcessedFileHandler(socketAcknowledgerBridge))
 	util.Ensure(err, "From Socket succesfully opened and listening")
 	fromSocket.Start(&wg)
 
@@ -72,6 +75,9 @@ func main() {
 	mqSender, err := messageq.NewSender(uploaderMqBridge, brokerURL, outputQueue)
 	util.Ensure(err, "MessageQueue sender succesfully created and listening")
 	mqSender.Start(&wg)
+
+	acknowledger := messageq.NewAcknowledger(mqListener.ToAcknowledge, socketAcknowledgerBridge)
+	acknowledger.Start(&wg)
 
 	usChecker := manager.NewUpstreamChecker(envcomm.ManagerURL, envcomm.PipelineHash, envcomm.ProcessName, 5)
 	usChecker.Start(&wg)

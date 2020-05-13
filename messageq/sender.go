@@ -72,7 +72,7 @@ func (sender Sender) StartBlocking() {
 		remoteFragment := *remoteFragMsg.(*desc.RemoteFragmentDesc)
 
 		var q amqp.Queue
-		if remoteFragment.Metadata != nil && remoteFragment.Metadata.TargetQueue != nil {
+		if remoteFragment.Metadata.TargetQueue != nil {
 			queueName := *remoteFragment.Metadata.TargetQueue
 			if _, ok := queues[queueName]; !ok {
 				queues[queueName] = sender.DeclareQueue(queueName, ch)

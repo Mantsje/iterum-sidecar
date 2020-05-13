@@ -55,7 +55,12 @@ func (u Uploader) completionTracker(wg *sync.WaitGroup) {
 			files = append(files, uloadedFile)
 		}
 	}
-	rfd := desc.RemoteFragmentDesc{Files: files, Metadata: toRemoteMetadata(u.UploadDescriptor.Metadata)}
+	meta := toRemoteMetadata(u.UploadDescriptor.Metadata)
+	meta.FragmentID = desc.NewIterumID() // Generate new ID for the new fragment
+	if err := meta.Validate(); err != nil {
+		log.Errorln(err)
+	}
+	rfd := desc.RemoteFragmentDesc{Files: files, Metadata: meta}
 	u.NotifyManager <- &rfd
 }
 
