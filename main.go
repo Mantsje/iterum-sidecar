@@ -9,6 +9,7 @@ import (
 
 	"github.com/iterum-provenance/iterum-go/transmit"
 	"github.com/iterum-provenance/sidecar/env"
+	"github.com/iterum-provenance/sidecar/lineage"
 	"github.com/iterum-provenance/sidecar/manager"
 	"github.com/iterum-provenance/sidecar/messageq"
 	"github.com/iterum-provenance/sidecar/socket"
@@ -32,6 +33,9 @@ func main() {
 
 	socketAcknowledgerBridgeBufferSize := 10
 	socketAcknowledgerBridge := make(chan transmit.Serializable, socketAcknowledgerBridgeBufferSize)
+
+	mqLineageBridgeBufferSize := 10
+	mqLineageBridge := make(chan transmit.Serializable, mqLineageBridgeBufferSize)
 
 	// Socket setup
 	toSocketFile := env.TransformationStepInputSocket
@@ -72,7 +76,7 @@ func main() {
 	util.Ensure(err, "MessageQueue listener succesfully created and listening")
 	mqListener.Start(&wg)
 
-	mqSender, err := messageq.NewSender(uploaderMqBridge, brokerURL, outputQueue)
+	mqSender, err := messageq.NewSender(uploaderMqBridge, mqLineageBridge, brokerURL, outputQueue)
 	util.Ensure(err, "MessageQueue sender succesfully created and listening")
 	mqSender.Start(&wg)
 
@@ -82,6 +86,9 @@ func main() {
 	usChecker := manager.NewUpstreamChecker(envcomm.ManagerURL, envcomm.PipelineHash, envcomm.ProcessName, 5)
 	usChecker.Start(&wg)
 	usChecker.Register <- mqListener.CanExit
+
+	lineageTracker := lineage.NewTracker(envcomm.ProcessName, envcomm.ManagerURL, envcomm.PipelineHash, mqLineageBridge)
+	lineageTracker.Start(&wg)
 
 	wg.Wait()
 }

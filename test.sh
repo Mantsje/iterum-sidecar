@@ -7,8 +7,8 @@ export MANAGER_URL="http://dummy-url"
 
 
 export MQ_BROKER_URL="amqp://iterum:sinaasappel@localhost:5672"
-# export MQ_INPUT_QUEUE="frag-out"
-export MQ_INPUT_QUEUE="queueA"
+export MQ_INPUT_QUEUE="frag-out"
+# export MQ_INPUT_QUEUE="queueA"
 export MQ_OUTPUT_QUEUE="trans1-out"
 
 export MINIO_URL="localhost:9000"

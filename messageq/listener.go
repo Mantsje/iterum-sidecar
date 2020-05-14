@@ -131,4 +131,5 @@ func (listener *Listener) Start(wg *sync.WaitGroup) {
 func (listener *Listener) Stop() {
 	log.Infof("MQListener finishing up, consumed %v messages\n", listener.fragments)
 	close(listener.MqOutput)
+	close(listener.ToAcknowledge)
 }

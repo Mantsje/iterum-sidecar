@@ -32,21 +32,27 @@ func ProcessedFileHandler(acknowledger chan transmit.Serializable) func(socket S
 				// Default behaviour
 				// unwrap socket fragmentDesc into general type before posting on output
 				lfd := fragMsg.LocalFragmentDesc
+				if len(lfd.Metadata.Predecessors) < 1 {
+					log.Errorf("Returned local fragment did not contain any predecessors")
+					continue
+				}
 				socket.Channel <- &lfd
 			} else if errDone == nil {
 				acknowledger <- &doneMsg
 			} else if errKill == nil {
 				log.Info("Received kill message, stopping consumer...")
-				defer socket.Stop()
 				defer close(socket.Channel)
 				defer close(acknowledger)
+				defer socket.Stop()
 				return
 			} else {
 				// Error handling
 				switch errFrag.(type) {
 				case *transmit.SerializationError:
-					log.Fatalf("Could not decode message due to '%v'", errFrag)
-					continue
+					log.Errorf("Could not decode '%v' due to one of:", string(encMsg))
+					log.Errorln(errFrag)
+					log.Errorln(errDone)
+					log.Fatalln(errKill)
 				default:
 					log.Errorf("'%v', closing connection", errFrag)
 					return

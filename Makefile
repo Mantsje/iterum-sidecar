@@ -15,7 +15,7 @@ image:
 
 build: FORCE 
 	go mod edit -dropreplace=github.com/iterum-provenance/iterum-go
-	go build -o ./build/${NAME} -modfile go.mod
+	go build -o ./build/${NAME}
 
 local: FORCE
 	go mod edit -replace=github.com/iterum-provenance/iterum-go=$(GOPATH)/src/github.com/iterum-provenance/iterum-go

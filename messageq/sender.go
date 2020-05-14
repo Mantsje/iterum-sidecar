@@ -16,16 +16,18 @@ import (
 // Sender is the structure that listens to a channel and redirects messages to rabbitMQ
 type Sender struct {
 	toSend      <-chan transmit.Serializable // data.RemoteFragmentDesc
+	ToLineate   chan<- transmit.Serializable // desc.RemoteFragmentDesc
 	TargetQueue string
 	BrokerURL   string
 	fragments   int
 }
 
 // NewSender creates a new sender which receives messages from a channel and sends them on the message queue.
-func NewSender(toSend <-chan transmit.Serializable, brokerURL, targetQueue string) (sender Sender, err error) {
+func NewSender(toSend, toLineate chan transmit.Serializable, brokerURL, targetQueue string) (sender Sender, err error) {
 
 	sender = Sender{
 		toSend,
+		toLineate,
 		targetQueue,
 		brokerURL,
 		0,
@@ -90,6 +92,7 @@ func (sender Sender) StartBlocking() {
 			log.Errorln(err)
 		}
 
+		sender.ToLineate <- &remoteFragment
 		err = ch.Publish(
 			"",     // exchange
 			q.Name, // routing key
@@ -121,4 +124,5 @@ func (sender Sender) Start(wg *sync.WaitGroup) {
 // Stop finishes up and notifies the user of its progress
 func (sender Sender) Stop() {
 	log.Infof("MQSender finishing up, published %v messages\n", sender.fragments)
+	close(sender.ToLineate)
 }
