@@ -71,20 +71,8 @@ func _getData(url string, target interface{}) (err error) {
 	if resp.StatusCode != http.StatusOK {
 		return errors.New("Getting upstream state from manager did not return 'StatusOK'")
 	}
-	// version 1
-	// data := make([]byte, resp.ContentLength)
-	// _, err = resp.Body.Read(data)
-	// err = json.Unmarshal(data, target)
-
-	// version 2
-	// err = json.NewDecoder(resp.Body).Decode(target)
-	// util.PanicIfErr(err, fmt.Sprintf("Reading response body failed due to: '%v'", err))
-
-	//version 3
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	util.PanicIfErr(err, fmt.Sprintf("Reading response body failed due to: '%v'", err))
-	bodyString := string(bodyBytes)
-	log.Info(bodyString)
 
 	err = json.Unmarshal(bodyBytes, target)
 	util.PanicIfErr(err, fmt.Sprintf("Parsing response body failed due to: '%v'", err))
