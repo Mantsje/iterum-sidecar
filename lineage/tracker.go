@@ -48,7 +48,7 @@ func (tracker Tracker) postLineage(rfd desc.RemoteFragmentDesc) (err error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("Post lineage request did not return 'StatusOK', instead got '%v'", resp.StatusCode)
+		return fmt.Errorf("Post lineage request did not return 'StatusOK' nor 'StatusCreated', instead got '%v'", resp.StatusCode)
 	}
 	return nil
 }
@@ -59,7 +59,9 @@ func (tracker *Tracker) StartBlocking() {
 	for msg := range tracker.ToLineate {
 		rfd := *msg.(*desc.RemoteFragmentDesc)
 		err := tracker.postLineage(rfd)
-		log.Errorln(err)
+		if err != nil {
+			log.Errorln(err)
+		}
 		tracked++
 	}
 	log.Infof("Finishing up lineage tracker. Tracked %v fragments\n", tracked)
