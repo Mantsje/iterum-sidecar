@@ -3,7 +3,6 @@ package lineage
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -49,7 +48,7 @@ func (tracker Tracker) postLineage(rfd desc.RemoteFragmentDesc) (err error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return errors.New("Post lineage request did not return 'StatusOK'")
+		return fmt.Errorf("Post lineage request did not return 'StatusOK', instead got '%v'", resp.StatusCode)
 	}
 	return nil
 }
