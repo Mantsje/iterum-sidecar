@@ -47,7 +47,7 @@ func (tracker Tracker) postLineage(rfd desc.RemoteFragmentDesc) (err error) {
 	util.PanicIfErr(err, fmt.Sprintf("Posting lineage failed due to '%v'", err))
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return fmt.Errorf("Post lineage request did not return 'StatusOK', instead got '%v'", resp.StatusCode)
 	}
 	return nil
