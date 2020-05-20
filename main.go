@@ -72,16 +72,13 @@ func main() {
 	inputQueue := envcomm.MQInputQueue
 
 	// MessageQueue setup
-	mqListener, err := messageq.NewListener(mqDownloaderBridge, brokerURL, inputQueue)
+	mqListener, err := messageq.NewListener(mqDownloaderBridge, socketAcknowledgerBridge, brokerURL, inputQueue)
 	util.Ensure(err, "MessageQueue listener succesfully created and listening")
 	mqListener.Start(&wg)
 
 	mqSender, err := messageq.NewSender(uploaderMqBridge, mqLineageBridge, brokerURL, outputQueue)
 	util.Ensure(err, "MessageQueue sender succesfully created and listening")
 	mqSender.Start(&wg)
-
-	acknowledger := messageq.NewAcknowledger(mqListener.ToAcknowledge, socketAcknowledgerBridge)
-	acknowledger.Start(&wg)
 
 	usChecker := manager.NewUpstreamChecker(envcomm.ManagerURL, envcomm.PipelineHash, envcomm.ProcessName, 5)
 	usChecker.Start(&wg)

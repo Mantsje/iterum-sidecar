@@ -13,41 +13,28 @@ import (
 
 // Listener is the structure that listens to RabbitMQ and redirects messages to a channel
 type Listener struct {
-	MqOutput      chan<- transmit.Serializable // data.RemoteFragmentDesc
-	ToAcknowledge chan amqp.Delivery
-	BrokerURL     string
-	TargetQueue   string
-	CanExit       chan bool
-	exit          chan bool
-	fragments     int
+	BrokerURL    string
+	TargetQueue  string
+	CanExit      chan bool
+	exit         chan bool
+	consumer     Consumer
+	acknowledger Acknowledger
 }
 
 // NewListener creates a new message queue listener
-func NewListener(channel chan<- transmit.Serializable, brokerURL, inputQueue string) (listener Listener, err error) {
+func NewListener(output, finishedFragments chan transmit.Serializable, brokerURL, inputQueue string) (listener Listener, err error) {
+	consumer := NewConsumer(output, nil, inputQueue)
+	acknowledger := NewAcknowledger(consumer.ToAcknowledge, finishedFragments)
 
 	listener = Listener{
-		channel,
-		make(chan amqp.Delivery, 10),
 		brokerURL,
 		inputQueue,
 		make(chan bool, 1),
 		make(chan bool, 1),
-		0,
+		consumer,
+		acknowledger,
 	}
 	return
-}
-
-func (listener *Listener) handleRemoteFragment(message amqp.Delivery) {
-	var mqFragment MqFragmentDesc
-	err := mqFragment.Deserialize(message.Body)
-	if err != nil {
-		log.Errorln(err)
-	}
-	log.Debugf("Received a mqFragment: %v\n", mqFragment)
-	var remoteFragment = mqFragment.RemoteFragmentDesc
-
-	listener.MqOutput <- &remoteFragment
-	listener.ToAcknowledge <- message
 }
 
 func (listener *Listener) messagesLeftChecker(ch *amqp.Channel) {
@@ -61,13 +48,16 @@ func (listener *Listener) messagesLeftChecker(ch *amqp.Channel) {
 		log.Infof("%v messages remaining in Queue. Closing when zero\n", qChecker.Messages)
 		time.Sleep(5 * time.Second)
 	}
-	log.Infof("MQListener processed all messages\n")
+	log.Infof("MQListener consumed all messages\n")
+	listener.consumer.Exit <- true
+	close(listener.consumer.Exit)
 	listener.exit <- true
 	close(listener.exit)
 }
 
 // StartBlocking listens on the rabbitMQ messagequeue and redirects messages on the INPUT_QUEUE to a channel
 func (listener *Listener) StartBlocking() {
+	wg := &sync.WaitGroup{}
 
 	log.Infof("Connecting to %s.\n", listener.BrokerURL)
 	conn, err := amqp.Dial(listener.BrokerURL)
@@ -78,33 +68,13 @@ func (listener *Listener) StartBlocking() {
 	util.Ensure(err, "Opened channel")
 	defer ch.Close()
 
-	q, err := ch.QueueDeclare(
-		listener.TargetQueue, // name
-		false,                // durable
-		false,                // delete when unused
-		false,                // exclusive
-		false,                // no-wait
-		nil,                  // arguments
-	)
-	util.Ensure(err, "Created queue")
+	listener.consumer.mqChannel = ch
 
-	mqMessages, err := ch.Consume(
-		q.Name, // queue
-		"",     // consumer
-		false,  // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // args
-	)
-	util.Ensure(err, "Registered consumer")
+	listener.consumer.Start(wg)
+	listener.acknowledger.Start(wg)
 
-	log.Infof("Started listening for messages from the MQ.\n")
-	for listener.CanExit != nil || mqMessages != nil {
+	for listener.CanExit != nil || listener.exit != nil {
 		select {
-		case message := <-mqMessages:
-			listener.handleRemoteFragment(message)
-			listener.fragments++
 		case canExitOnEmpty := <-listener.CanExit:
 			if canExitOnEmpty {
 				listener.CanExit = nil
@@ -112,10 +82,12 @@ func (listener *Listener) StartBlocking() {
 			}
 		case <-listener.exit:
 			listener.exit = nil
-			mqMessages = nil
 		}
 	}
-	listener.Stop()
+
+	log.Infof("MQListener awaiting acknowledger and consumer\n")
+	wg.Wait()
+	log.Infof("MQListener finished\n")
 }
 
 // Start asychronously calls StartBlocking via Gorouting
@@ -125,11 +97,4 @@ func (listener *Listener) Start(wg *sync.WaitGroup) {
 		defer wg.Done()
 		listener.StartBlocking()
 	}()
-}
-
-// Stop finishes up and notifies the user of its progress
-func (listener *Listener) Stop() {
-	log.Infof("MQListener finishing up, consumed %v messages\n", listener.fragments)
-	close(listener.MqOutput)
-	close(listener.ToAcknowledge)
 }
