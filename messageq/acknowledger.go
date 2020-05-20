@@ -59,7 +59,7 @@ func (ack *Acknowledger) StartBlocking() {
 			}
 			err := delivery.Ack(false)
 			if err != nil {
-
+				log.Errorln(err)
 			}
 			delete(ack.pending, doneMsg.FragmentID)
 			ack.acknowledged++
