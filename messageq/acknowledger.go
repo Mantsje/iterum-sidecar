@@ -40,6 +40,9 @@ func (ack *Acknowledger) StartBlocking() {
 			if err != nil {
 				log.Errorln(err)
 			}
+			if _, ok := ack.pending[mqFragment.Metadata.FragmentID]; ok {
+				log.Errorf("Duplicate FragmentID found for pending map: '%v'\n", mqFragment.Metadata.FragmentID)
+			}
 			ack.pending[mqFragment.Metadata.FragmentID] = msg
 		case msg, ok := <-ack.acknowledge:
 			if !ok {
