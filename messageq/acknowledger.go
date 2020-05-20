@@ -11,17 +11,21 @@ import (
 
 // Acknowledger is responsible for sending acknowledgement messages to the MQ
 type Acknowledger struct {
-	acknowledge <-chan transmit.Serializable    // *desc.FinishedFragmentMessage
-	pending     map[desc.IterumID]amqp.Delivery // unacknowledged
-	consumed    <-chan amqp.Delivery
+	acknowledge        <-chan transmit.Serializable    // *desc.FinishedFragmentMessage
+	pending            map[desc.IterumID]amqp.Delivery // unacknowledged
+	consumed           <-chan amqp.Delivery
+	acknowledgedCount  int
+	toAcknowledgeCount int
 }
 
 // NewAcknowledger isntantiates a new Acknowledger struct
 func NewAcknowledger(consumed chan amqp.Delivery, toAcknowledge chan transmit.Serializable) Acknowledger {
 	return Acknowledger{
-		acknowledge: toAcknowledge,
-		consumed:    consumed,
-		pending:     map[desc.IterumID]amqp.Delivery{},
+		acknowledge:        toAcknowledge,
+		consumed:           consumed,
+		pending:            map[desc.IterumID]amqp.Delivery{},
+		acknowledgedCount:  0,
+		toAcknowledgeCount: 0,
 	}
 }
 
@@ -44,6 +48,7 @@ func (ack *Acknowledger) StartBlocking() {
 				log.Errorf("Duplicate FragmentID found for pending map: '%v'\n", mqFragment.Metadata.FragmentID)
 			}
 			ack.pending[mqFragment.Metadata.FragmentID] = msg
+			ack.toAcknowledgeCount++
 		case msg, ok := <-ack.acknowledge:
 			if !ok {
 				ack.acknowledge = nil
@@ -57,12 +62,13 @@ func (ack *Acknowledger) StartBlocking() {
 			}
 			delivery.Ack(false)
 			delete(ack.pending, doneMsg.FragmentID)
+			ack.acknowledgedCount++
 		}
 	}
 	if len(ack.pending) != 0 {
 		log.Errorln("Acknowledger.pending is not empty at end of lifecycle, unacknowledged messages remain")
 	}
-	log.Infof("Both input channels are closed, finishing up Acknowledger")
+	log.Infof("Both input channels are closed, finishing up Acknowledger. Acknowledged %v out of %v passed", ack.acknowledgedCount, ack.toAcknowledgeCount)
 }
 
 // Start asychronously calls StartBlocking via Gorouting
