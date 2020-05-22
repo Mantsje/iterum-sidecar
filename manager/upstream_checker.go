@@ -84,6 +84,7 @@ func _getData(url string, target interface{}) (err error) {
 var dummyCounter = 5
 
 func dummyCheck(url string, state *upstreamState) error {
+	log.Warnf("Running dummy upstream state checker")
 	if dummyCounter > 0 {
 		dummyCounter--
 		state.Finished = false
