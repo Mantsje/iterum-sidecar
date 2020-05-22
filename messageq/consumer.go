@@ -97,6 +97,6 @@ func (consumer *Consumer) Start(wg *sync.WaitGroup) {
 // Stop finishes up the consumer
 func (consumer *Consumer) Stop() {
 	log.Infof("MQConsumer finishing up, consumed %v messages\n", consumer.consumed)
-	// close(consumer.Output)
-	// close(consumer.ToAcknowledge)
+	close(consumer.Output)
+	close(consumer.ToAcknowledge)
 }
