@@ -8,6 +8,7 @@ import (
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/iterum-provenance/iterum-go/minio"
 	"github.com/iterum-provenance/iterum-go/transmit"
+	"github.com/iterum-provenance/sidecar/env/config"
 )
 
 // Uploader is a struct responsible for uploading a single fragment to the minio client
@@ -17,16 +18,17 @@ type Uploader struct {
 	NotifyManager    chan transmit.Serializable // Channel to notify upload_manager of fragment completion
 	UploadDescriptor desc.LocalFragmentDesc
 	Minio            minio.Config
+	sidecarConfig    *config.Config
 }
 
 // NewUploader creates a new Uploader instance that will upload the passed fragment description
-func NewUploader(msg desc.LocalFragmentDesc, minio minio.Config, manager chan transmit.Serializable) Uploader {
+func NewUploader(msg desc.LocalFragmentDesc, minio minio.Config, manager chan transmit.Serializable, sidecarConf *config.Config) Uploader {
 	completed := make(map[string]string)
 	for _, file := range msg.Files {
 		completed[file.Name] = ""
 	}
 
-	return Uploader{completed, make(chan desc.RemoteFileDesc, len(msg.Files)), manager, msg, minio}
+	return Uploader{completed, make(chan desc.RemoteFileDesc, len(msg.Files)), manager, msg, minio, sidecarConf}
 }
 
 // IsComplete checks whether all uploads have completed
@@ -55,7 +57,7 @@ func (u Uploader) completionTracker(wg *sync.WaitGroup) {
 			files = append(files, uloadedFile)
 		}
 	}
-	meta := toRemoteMetadata(u.UploadDescriptor.Metadata)
+	meta := toRemoteMetadata(u.sidecarConfig, u.UploadDescriptor.Metadata)
 	meta.FragmentID = desc.NewIterumID() // Generate new ID for the new fragment
 	if err := meta.Validate(); err != nil {
 		log.Errorln(err)

@@ -5,21 +5,21 @@ import (
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 
-	"github.com/iterum-provenance/sidecar/env"
+	"github.com/iterum-provenance/sidecar/env/config"
 )
 
 // toRemoteMetadata converts a local fragment description's metadata into a remote one
-func toRemoteMetadata(localMeta desc.LocalMetadata) (remoteMeta desc.RemoteMetadata) {
+func toRemoteMetadata(sidecarConf *config.Config, localMeta desc.LocalMetadata) (remoteMeta desc.RemoteMetadata) {
 	remoteMeta = desc.RemoteMetadata{
 		FragmentID:   localMeta.FragmentID,
 		Predecessors: localMeta.Predecessors,
 		Custom:       localMeta.Custom,
 	}
 	if localMeta.OutputChannel != nil {
-		if env.SidecarConfig == nil {
+		if sidecarConf == nil {
 			log.Fatalf("Cannot convert output channel to remote queue, because sidecar has no config")
 		}
-		queue, err := env.SidecarConfig.MapQueue(*localMeta.OutputChannel)
+		queue, err := sidecarConf.MapQueue(*localMeta.OutputChannel)
 		if err != nil {
 			log.Fatal(err)
 		}

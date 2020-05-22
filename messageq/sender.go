@@ -7,9 +7,9 @@ import (
 	"github.com/prometheus/common/log"
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
+	"github.com/iterum-provenance/iterum-go/transmit"
 	"github.com/iterum-provenance/iterum-go/util"
 
-	"github.com/iterum-provenance/iterum-go/transmit"
 	"github.com/streadway/amqp"
 )
 

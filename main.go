@@ -64,7 +64,7 @@ func main() {
 	util.PanicIfErr(err, "")
 	err = minioConfigUp.Connect()
 	util.PanicIfErr(err, "")
-	uploadManager := store.NewUploadManager(minioConfigUp, socketUploaderBridge, uploaderMqBridge)
+	uploadManager := store.NewUploadManager(minioConfigUp, socketUploaderBridge, uploaderMqBridge, env.SidecarConfig)
 	uploadManager.Start(&wg)
 
 	brokerURL := envcomm.MQBrokerURL

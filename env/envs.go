@@ -34,26 +34,30 @@ func VerifySidecarEnvs() error {
 	return nil
 }
 
-func init() {
-	errIterum := env.VerifyIterumEnvs()
-	errMinio := env.VerifyMinioEnvs()
-	errMessageq := env.VerifyMessageQueueEnvs()
-	errSidecar := VerifySidecarEnvs()
-
-	err := util.ReturnFirstErr(errIterum, errMinio, errMessageq, errSidecar)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
+// VerifySidecarConfig verifies the config struct of the sidecar
+func VerifySidecarConfig() error {
 	if env.ProcessConfig == "" {
 		log.Infoln("Sidecar was initialized without additional config, make sure that this was intended")
 	} else {
 		c := config.Config{}
 		errConfig := c.FromString(env.ProcessConfig)
 		if errConfig != nil {
-			log.Fatalln(err)
+			return errConfig
 		}
 		SidecarConfig = &c
 	}
+	return nil
+}
 
+func init() {
+	errIterum := env.VerifyIterumEnvs()
+	errMinio := env.VerifyMinioEnvs()
+	errMessageq := env.VerifyMessageQueueEnvs()
+	errSidecar := VerifySidecarEnvs()
+	errSidecarConf := VerifySidecarConfig()
+
+	err := util.ReturnFirstErr(errIterum, errMinio, errMessageq, errSidecar, errSidecarConf)
+	if err != nil {
+		log.Fatalln(err)
+	}
 }
