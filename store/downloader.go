@@ -1,6 +1,7 @@
 package store
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/prometheus/common/log"
@@ -65,7 +66,7 @@ func (d Downloader) download(descriptor desc.RemoteFileDesc, wg *sync.WaitGroup)
 	defer wg.Done()
 	localFileDesc, err := d.Minio.GetFile(descriptor, d.Folder)
 	if err != nil {
-		log.Errorf("Download failed due to: '%v'\n", err)
+		log.Errorf("Download failed due to: '%v'\n %s", err, fmt.Sprintf("Bucket: '%v', Name: '%v', Folder: '%v'", descriptor.Bucket, descriptor.Name, d.Folder))
 		return
 	}
 	d.NotifyComplete <- localFileDesc

@@ -7,6 +7,7 @@ import (
 	"github.com/iterum-provenance/iterum-go/minio"
 	"github.com/iterum-provenance/iterum-go/transmit"
 	"github.com/iterum-provenance/sidecar/env/config"
+	"github.com/iterum-provenance/sidecar/garbage"
 
 	"github.com/prometheus/common/log"
 )
@@ -19,12 +20,22 @@ type UploadManager struct {
 	sidecarConfig  *config.Config
 	fragments      int
 	strictOrdering bool
+	fragCollector  garbage.FragmentCollector
 }
 
 // NewUploadManager creates a new upload manager and initiates a client of the Minio service
-func NewUploadManager(minio minio.Config, toUpload, completed chan transmit.Serializable, sidecarConfig *config.Config) UploadManager {
+func NewUploadManager(minio minio.Config, toUpload, completed chan transmit.Serializable,
+	sidecarConfig *config.Config, collector garbage.FragmentCollector) UploadManager {
 
-	return UploadManager{toUpload, completed, minio, sidecarConfig, 0, false}
+	return UploadManager{
+		toUpload,
+		completed,
+		minio,
+		sidecarConfig,
+		0,
+		false,
+		collector,
+	}
 }
 
 // StartBlocking enters an endless loop consuming LocalFragmentDesc and uploading the associated data
@@ -35,7 +46,7 @@ func (um UploadManager) StartBlocking() {
 		if !ok {
 			break
 		}
-		uloader := NewUploader(*msg.(*desc.LocalFragmentDesc), um.Minio, um.Completed, um.sidecarConfig)
+		uloader := NewUploader(*msg.(*desc.LocalFragmentDesc), um.Minio, um.Completed, um.sidecarConfig, um.fragCollector)
 
 		if um.strictOrdering {
 			uloader.StartBlocking()
@@ -62,4 +73,6 @@ func (um UploadManager) Start(wg *sync.WaitGroup) {
 func (um UploadManager) Stop() {
 	log.Infof("UploadManager finishing up, (tried to) upload(ed) %v fragments", um.fragments)
 	close(um.Completed)
+	close(um.fragCollector.Track)
+	close(um.fragCollector.Collect)
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/iterum-provenance/iterum-go/transmit"
 	"github.com/iterum-provenance/sidecar/env"
+	"github.com/iterum-provenance/sidecar/garbage"
 	"github.com/iterum-provenance/sidecar/lineage"
 	"github.com/iterum-provenance/sidecar/manager"
 	"github.com/iterum-provenance/sidecar/messageq"
@@ -37,15 +38,18 @@ func main() {
 	mqLineageBridgeBufferSize := 10
 	mqLineageBridge := make(chan transmit.Serializable, mqLineageBridgeBufferSize)
 
+	fragCollector := garbage.NewFragmentCollector()
+	fragCollector.Start(&wg)
+
 	// Socket setup
 	toSocketFile := env.TransformationStepInputSocket
 	fromSocketFile := env.TransformationStepOutputSocket
 
-	toSocket, err := socket.NewSocket(toSocketFile, downloaderSocketBridge, socket.SendFileHandler())
+	toSocket, err := socket.NewSocket(toSocketFile, downloaderSocketBridge, socket.SendFileHandler(fragCollector))
 	util.Ensure(err, "Towards Socket succesfully opened and listening")
 	toSocket.Start(&wg)
 
-	fromSocket, err := socket.NewSocket(fromSocketFile, socketUploaderBridge, socket.ProcessedFileHandler(socketAcknowledgerBridge))
+	fromSocket, err := socket.NewSocket(fromSocketFile, socketUploaderBridge, socket.ProcessedFileHandler(socketAcknowledgerBridge, fragCollector))
 	util.Ensure(err, "From Socket succesfully opened and listening")
 	fromSocket.Start(&wg)
 
@@ -64,7 +68,7 @@ func main() {
 	util.PanicIfErr(err, "")
 	err = minioConfigUp.Connect()
 	util.PanicIfErr(err, "")
-	uploadManager := store.NewUploadManager(minioConfigUp, socketUploaderBridge, uploaderMqBridge, env.SidecarConfig)
+	uploadManager := store.NewUploadManager(minioConfigUp, socketUploaderBridge, uploaderMqBridge, env.SidecarConfig, fragCollector)
 	uploadManager.Start(&wg)
 
 	brokerURL := envcomm.MQBrokerURL

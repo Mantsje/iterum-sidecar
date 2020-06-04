@@ -6,18 +6,19 @@ import (
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/iterum-provenance/iterum-go/transmit"
+	"github.com/iterum-provenance/sidecar/garbage"
 
 	"github.com/prometheus/common/log"
 )
 
 // ProcessedFileHandler is a handler for a socket that receives processed files from the transformation step
-func ProcessedFileHandler(acknowledger chan transmit.Serializable) func(socket Socket, conn net.Conn) {
+func ProcessedFileHandler(acknowledger chan transmit.Serializable, fragCollector garbage.FragmentCollector) func(socket Socket, conn net.Conn) {
 	return func(socket Socket, conn net.Conn) {
 		defer conn.Close()
 		for {
 			encMsg, err := transmit.ReadMessage(conn)
 			if err != nil {
-				log.Warnf("Failed to read, closing connection towards due to '%v'", err)
+				log.Warnf("Failed to read, closing connection from due to '%v'", err)
 				return
 			}
 
@@ -39,6 +40,7 @@ func ProcessedFileHandler(acknowledger chan transmit.Serializable) func(socket S
 				socket.Channel <- &lfd
 			} else if errDone == nil {
 				acknowledger <- &doneMsg
+				fragCollector.Collect <- doneMsg.FragmentID
 			} else if errKill == nil {
 				log.Info("Received kill message, stopping consumer...")
 				defer close(socket.Channel)

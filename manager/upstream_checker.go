@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -110,8 +111,12 @@ func (checker UpstreamChecker) periodicCheck(wg *sync.WaitGroup, interval int) {
 	endpoint := checker.ManagerURL + "/pipeline/" + checker.PipelineHash + "/" + checker.ProcessName + "/upstream_finished"
 	for {
 		newState := upstreamState{}
-		err := _getData(endpoint, &newState)
-		// err := dummyCheck(endpoint, &newState)
+		var err error
+		if strings.Contains(checker.ManagerURL, "dummy") {
+			err = dummyCheck(endpoint, &newState)
+		} else {
+			err = _getData(endpoint, &newState)
+		}
 		if err != nil {
 			handleErr(err)
 			continue
