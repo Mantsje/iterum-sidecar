@@ -59,6 +59,7 @@ func (fgb *FragmentCollector) StartBlocking() {
 				continue
 			}
 			go fgb.deleteFromDisk(fgb.backlog[fragID])
+			delete(fgb.backlog, fragID)
 		}
 	}
 	if len(fgb.backlog) != 0 {
