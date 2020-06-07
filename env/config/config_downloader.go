@@ -4,10 +4,10 @@ import (
 	"os"
 	"sync"
 
-	"github.com/gaarkeuken/go-lib/util"
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/iterum-provenance/iterum-go/env"
 	"github.com/iterum-provenance/iterum-go/minio"
+	"github.com/iterum-provenance/iterum-go/util"
 	"github.com/prometheus/common/log"
 )
 
