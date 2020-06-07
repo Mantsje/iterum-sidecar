@@ -11,7 +11,7 @@ import (
 // Config is the struct holding configurable information
 // This can be set via the environment variable ITERUM_CONFIG
 type Config struct {
-	QueueMapping    map[string]string `json:"queue_mapping"` // nillable, transformation-step output -> message queue
+	QueueMapping    map[string]string // nillable, transformation-step output -> message queue
 	ConfigSelectors []*regexp.Regexp
 }
 
