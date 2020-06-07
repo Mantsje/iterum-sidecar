@@ -9,6 +9,7 @@ import (
 
 	"github.com/iterum-provenance/iterum-go/transmit"
 	"github.com/iterum-provenance/sidecar/env"
+	"github.com/iterum-provenance/sidecar/env/config"
 	"github.com/iterum-provenance/sidecar/garbage"
 	"github.com/iterum-provenance/sidecar/lineage"
 	"github.com/iterum-provenance/sidecar/manager"
@@ -61,6 +62,9 @@ func main() {
 	util.PanicIfErr(err, "")
 	downloadManager := store.NewDownloadManager(minioConfigDown, mqDownloaderBridge, downloaderSocketBridge)
 	downloadManager.Start(&wg)
+
+	configDownloader := config.NewDownloader(env.SidecarConfig, minioConfigDown)
+	configDownloader.Start(&wg)
 
 	// Upload manager setup
 	// Define and connect to minio storage
