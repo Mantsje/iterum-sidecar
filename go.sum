@@ -57,6 +57,8 @@ github.com/iterum-provenance/iterum-go v0.2.2 h1:NyVFsBbj1N6w8fgLfY7StZOftke5BpH
 github.com/iterum-provenance/iterum-go v0.2.2/go.mod h1:lBD1WJMbMZRRJT9ZZsLqMhY5wePnk0Gxu5CmPAbMzVg=
 github.com/iterum-provenance/iterum-go v0.2.3 h1:Dep30MohzioLwWkLGnVdIoqDJBc9vL8kZFzWD2uU0Ik=
 github.com/iterum-provenance/iterum-go v0.2.3/go.mod h1:lBD1WJMbMZRRJT9ZZsLqMhY5wePnk0Gxu5CmPAbMzVg=
+github.com/iterum-provenance/iterum-go v0.2.4 h1:yFssV9m3tNStoW83X1h+Pp8lnJvpd1M5Krla3479ZME=
+github.com/iterum-provenance/iterum-go v0.2.4/go.mod h1:lBD1WJMbMZRRJT9ZZsLqMhY5wePnk0Gxu5CmPAbMzVg=
 github.com/joho/godotenv v1.3.0/go.mod h1:7hK45KPybAkOC6peb+G5yklZfMxEjkZhHbwpqxOKXbg=
 github.com/json-iterator/go v1.1.6/go.mod h1:+SdeFBvtyEkXs7REEP0seUULqWtbJapLOCVDaaPEHmU=
 github.com/jtolds/gls v4.20.0+incompatible/go.mod h1:QJZ7F/aHp+rZTRtaJ1ow/lLfFfVYBRgL+9YlvaHOwJU=

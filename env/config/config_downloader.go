@@ -35,6 +35,8 @@ func (cd Downloader) downloadConfigFile(file string) (localFile desc.LocalFileDe
 
 func (cd *Downloader) findFilesToDownload() {
 	files := cd.Minio.ListConfigFiles()
+	log.Infoln("Printing ListConfigFiles results")
+	log.Infoln(files)
 	cd.toDownload = cd.Config.ReturnMatchingFiles(files)
 }
 
