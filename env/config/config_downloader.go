@@ -42,8 +42,8 @@ func (cd *Downloader) findFilesToDownload() {
 
 // StartBlocking starts the process of downloading the config files
 func (cd *Downloader) StartBlocking() {
-	if cd.Config == nil {
-		log.Infoln("No config submitted to sidecar, so no files to download")
+	if cd.Config == nil || cd.Config.ConfigFiles == nil {
+		log.Infoln("No config(-files) submitted to sidecar, so no files to download")
 		return
 	}
 

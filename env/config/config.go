@@ -47,8 +47,8 @@ func (conf Config) ReturnMatchingFiles(files []string) (matches []string) {
 	matches = []string{}
 
 	// Match each file against the large regexp once
-	for _, file := range files {
-		for _, selector := range conf.ConfigFiles {
+	for _, selector := range conf.ConfigFiles {
+		for _, file := range files {
 			// here we don't do path.Dir (as we do in fragmenter-sidecar), since we do not interact with commit files here
 			if selector == file {
 				matches = append(matches, file)
