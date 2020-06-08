@@ -75,12 +75,13 @@ func main() {
 	uploadManager := store.NewUploadManager(minioConfigUp, socketUploaderBridge, uploaderMqBridge, env.SidecarConfig, fragCollector)
 	uploadManager.Start(&wg)
 
+	// MessageQueue setup
 	brokerURL := envcomm.MQBrokerURL
 	outputQueue := envcomm.MQOutputQueue
 	inputQueue := envcomm.MQInputQueue
+	prefetchCount := envcomm.MQPrefetchCount
 
-	// MessageQueue setup
-	mqListener, err := messageq.NewListener(mqDownloaderBridge, socketAcknowledgerBridge, brokerURL, inputQueue)
+	mqListener, err := messageq.NewListener(mqDownloaderBridge, socketAcknowledgerBridge, brokerURL, inputQueue, prefetchCount)
 	util.Ensure(err, "MessageQueue listener succesfully created and listening")
 	mqListener.Start(&wg)
 

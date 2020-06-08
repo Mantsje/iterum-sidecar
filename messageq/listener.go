@@ -1,6 +1,7 @@
 package messageq
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -13,26 +14,28 @@ import (
 
 // Listener is the structure that listens to RabbitMQ and redirects messages to a channel
 type Listener struct {
-	BrokerURL    string
-	TargetQueue  string
-	CanExit      chan bool
-	exit         chan bool
-	consumer     Consumer
-	acknowledger Acknowledger
+	BrokerURL     string
+	PrefetchCount int
+	TargetQueue   string
+	CanExit       chan bool
+	exit          chan bool
+	consumer      Consumer
+	acknowledger  Acknowledger
 }
 
 // NewListener creates a new message queue listener
-func NewListener(output, finishedFragments chan transmit.Serializable, brokerURL, inputQueue string) (listener Listener, err error) {
+func NewListener(output, finishedFragments chan transmit.Serializable, brokerURL, inputQueue string, prefetchCount int) (listener Listener, err error) {
 	consumer := NewConsumer(output, nil, inputQueue)
 	acknowledger := NewAcknowledger(consumer.ToAcknowledge, finishedFragments)
 
 	listener = Listener{
-		brokerURL,
-		inputQueue,
-		make(chan bool, 1),
-		make(chan bool, 1),
-		consumer,
-		acknowledger,
+		BrokerURL:     brokerURL,
+		PrefetchCount: prefetchCount,
+		TargetQueue:   inputQueue,
+		CanExit:       make(chan bool, 1),
+		exit:          make(chan bool, 1),
+		consumer:      consumer,
+		acknowledger:  acknowledger,
 	}
 	return
 }
@@ -67,6 +70,14 @@ func (listener *Listener) StartBlocking() {
 	ch, err := conn.Channel()
 	util.Ensure(err, "Opened channel")
 	defer ch.Close()
+	if listener.PrefetchCount > 0 {
+		err := ch.Qos(
+			listener.PrefetchCount, // prefetch count
+			0,                      // prefetch size
+			false,                  // global
+		)
+		util.Ensure(err, fmt.Sprintf("QoS was set to %v", listener.PrefetchCount))
+	}
 
 	listener.consumer.mqChannel = ch
 
