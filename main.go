@@ -5,9 +5,8 @@ import (
 
 	envcomm "github.com/iterum-provenance/iterum-go/env"
 	"github.com/iterum-provenance/iterum-go/minio"
-	"github.com/iterum-provenance/iterum-go/util"
-
 	"github.com/iterum-provenance/iterum-go/transmit"
+	"github.com/iterum-provenance/iterum-go/util"
 	"github.com/iterum-provenance/sidecar/env"
 	"github.com/iterum-provenance/sidecar/env/config"
 	"github.com/iterum-provenance/sidecar/garbage"
@@ -93,7 +92,7 @@ func main() {
 	usChecker.Start(&wg)
 	usChecker.Register <- mqListener.CanExit
 
-	lineageTracker := lineage.NewTracker(envcomm.ProcessName, envcomm.ManagerURL, envcomm.PipelineHash, mqLineageBridge)
+	lineageTracker := lineage.NewMqTracker(envcomm.ProcessName, envcomm.PipelineHash, brokerURL, mqLineageBridge)
 	lineageTracker.Start(&wg)
 
 	wg.Wait()
