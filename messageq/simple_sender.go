@@ -49,6 +49,7 @@ func (sender *SimpleSender) StartBlocking() {
 	sender.publisher.Start(wg)
 
 	for msg := range sender.ToSend {
+		log.Debugf("Simple sender got %v\n", msg)
 		// hand to publisher
 		sender.publisher.ToPublish <- msg
 		sender.messages++
@@ -57,7 +58,7 @@ func (sender *SimpleSender) StartBlocking() {
 }
 
 // Start asychronously calls StartBlocking via Gorouting
-func (sender SimpleSender) Start(wg *sync.WaitGroup) {
+func (sender *SimpleSender) Start(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -66,7 +67,7 @@ func (sender SimpleSender) Start(wg *sync.WaitGroup) {
 }
 
 // Stop finishes up and notifies the user of its progress
-func (sender SimpleSender) Stop() {
+func (sender *SimpleSender) Stop() {
 	log.Infof("SimpleSender finishing up, published %v messages\n", sender.messages)
 	close(sender.publisher.ToPublish)
 }

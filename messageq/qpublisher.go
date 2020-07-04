@@ -77,7 +77,7 @@ func (qpublisher *QPublisher) StartBlocking() {
 }
 
 // Start asychronously calls StartBlocking via Gorouting
-func (qpublisher QPublisher) Start(wg *sync.WaitGroup) {
+func (qpublisher *QPublisher) Start(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()

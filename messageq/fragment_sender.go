@@ -39,8 +39,9 @@ func NewSender(toSend, toLineate chan transmit.Serializable, brokerURL, targetQu
 func (sender *Sender) spawnPublisher(conn *amqp.Connection, targetQueue string) {
 	ch, err := conn.Channel() // Eventually closed by the QPublisher
 	util.Ensure(err, "Opened channel")
-	sender.Publishers[targetQueue] = NewQPublisher(make(chan transmit.Serializable, 10), ch, targetQueue)
-	sender.Publishers[targetQueue].Start(sender.publisherGroup)
+	publisher := NewQPublisher(make(chan transmit.Serializable, 10), ch, targetQueue)
+	publisher.Start(sender.publisherGroup)
+	sender.Publishers[targetQueue] = publisher
 }
 
 // StartBlocking listens to the channel, and send remoteFragments to the message queue on the OUTPUT_QUEUE queue.
@@ -63,6 +64,7 @@ func (sender *Sender) StartBlocking() {
 			}
 		}
 
+		log.Debugf("Fragment sender sending %v to toLineate and Publisher\n", remoteFragment)
 		// Wrap in messagequeue specific struct
 		mqFragment := newFragmentDesc(remoteFragment)
 		// hand to publisher
