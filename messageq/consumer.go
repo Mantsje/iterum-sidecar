@@ -75,9 +75,11 @@ consumeloop:
 		case message, ok := <-mqMessages:
 			if !ok {
 				log.Errorln("Consuming message from remote MQ went wrong, possibly channel is closed")
+				message.Ack(true)
+			} else {
+				consumer.handleRemoteFragment(message)
+				consumer.consumed++
 			}
-			consumer.handleRemoteFragment(message)
-			consumer.consumed++
 		case <-consumer.Exit:
 			break consumeloop
 		}
