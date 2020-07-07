@@ -2,6 +2,7 @@ package main
 
 import (
 	"sync"
+	"time"
 
 	envcomm "github.com/iterum-provenance/iterum-go/env"
 	"github.com/iterum-provenance/iterum-go/minio"
@@ -15,10 +16,21 @@ import (
 	"github.com/iterum-provenance/sidecar/messageq"
 	"github.com/iterum-provenance/sidecar/socket"
 	"github.com/iterum-provenance/sidecar/store"
+	"github.com/prometheus/common/log"
 )
 
 func main() {
+	startTime := time.Now()
+
 	// log.Base().SetLevel("Debug")
+
+	// defer func() { // Allow time to copy the profile file
+	// 	log.Infoln("Sleeping for 60 seconds...")
+	// 	time.Sleep(time.Second * 60)
+	// 	log.Infoln("Done")
+	// }()
+	// defer profile.Start(profile.MemProfile).Stop()
+	// defer profile.Start(profile.CPUProfile).Stop()
 
 	var wg sync.WaitGroup
 
@@ -56,12 +68,13 @@ func main() {
 	fromSocket.Start(&wg)
 
 	// Download manager setup
-	minioConfigDown, err := minio.NewMinioConfigFromEnv() // defaults to an output setup
+	minioConfigDown, err := minio.NewMinioConfigFromEnv() // defaults to an output/upload setup
 	util.PanicIfErr(err, "")
 	minioConfigDown.TargetBucket = "INVALID" // adjust such that the target output is unusable
 	err = minioConfigDown.Connect()
 	util.PanicIfErr(err, "")
 	downloadManager := store.NewDownloadManager(minioConfigDown, mqDownloaderBridge, downloaderSocketBridge)
+	// downloadManager := store.NewDownloadManagerPool(minioConfigDown, mqDownloaderBridge, downloaderSocketBridge)
 	downloadManager.Start(&wg)
 
 	configDownloader := config.NewDownloader(env.SidecarConfig, minioConfigDown)
@@ -74,6 +87,7 @@ func main() {
 	err = minioConfigUp.Connect()
 	util.PanicIfErr(err, "")
 	uploadManager := store.NewUploadManager(minioConfigUp, socketUploaderBridge, uploaderMqBridge, env.SidecarConfig, fragCollector)
+	// uploadManager := store.NewUploadManagerPool(minioConfigUp, socketUploaderBridge, uploaderMqBridge, env.SidecarConfig, &fragCollector)
 	uploadManager.Start(&wg)
 
 	// MessageQueue setup
@@ -98,4 +112,7 @@ func main() {
 	lineageTracker.Start(&wg)
 
 	wg.Wait()
+	log.Infoln("Sidecar successfully awaited all goroutines")
+
+	log.Infof("Ran for %v", time.Now().Sub(startTime))
 }

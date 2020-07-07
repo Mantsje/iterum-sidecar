@@ -46,11 +46,12 @@ func (qpublisher *QPublisher) DeclareQueue() {
 
 // StartBlocking listens to the channel, and send remoteFragments to the message queue on the OUTPUT_QUEUE queue.
 func (qpublisher *QPublisher) StartBlocking() {
+	defer qpublisher.Stop()
 	qpublisher.DeclareQueue()
 
 	for msg := range qpublisher.ToPublish {
 
-		log.Debugf("Sending %v to queue '%v'\n", msg, qpublisher.Queue.Name)
+		log.Debugf("MQPublisher sending %v to queue '%v'\n", msg, qpublisher.Queue.Name)
 
 		body, err := msg.Serialize()
 		if err != nil {
@@ -72,8 +73,7 @@ func (qpublisher *QPublisher) StartBlocking() {
 		}
 		qpublisher.fragments++
 	}
-
-	qpublisher.Stop()
+	log.Infof("MQPublisher finishing up, published %v messages to %v\n", qpublisher.fragments, qpublisher.Queue.Name)
 }
 
 // Start asychronously calls StartBlocking via Gorouting
@@ -87,6 +87,5 @@ func (qpublisher *QPublisher) Start(wg *sync.WaitGroup) {
 
 // Stop finishes up and notifies the user of its progress
 func (qpublisher *QPublisher) Stop() {
-	log.Infof("MQPublisher finishing up, published %v messages to %v\n", qpublisher.fragments, qpublisher.Queue.Name)
 	qpublisher.Channel.Close()
 }

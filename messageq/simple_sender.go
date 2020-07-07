@@ -31,21 +31,21 @@ func NewSimpleSender(toSend chan transmit.Serializable, brokerURL, targetQueue s
 
 func (sender *SimpleSender) spawnPublisher(conn *amqp.Connection) {
 	ch, err := conn.Channel() // Eventually closed by the QPublisher
-	util.Ensure(err, "Opened channel")
+	util.Ensure(err, "SimpleSender opened channel")
 	pub := NewQPublisher(make(chan transmit.Serializable, 10), ch, sender.TargetQueue)
 	sender.publisher = &pub
 }
 
 // StartBlocking listens to the channel, and send remoteFragments to the message queue on the OUTPUT_QUEUE queue.
 func (sender *SimpleSender) StartBlocking() {
-	log.Infof("Connecting to %s.\n", sender.BrokerURL)
+	wg := &sync.WaitGroup{}
+
+	log.Infof("SimpleSender connecting to %s.\n", sender.BrokerURL)
 	conn, err := amqp.Dial(sender.BrokerURL)
-	util.Ensure(err, "Connected to RabbitMQ")
-	defer conn.Close()
+	util.Ensure(err, "SimpleSender connected to RabbitMQ")
+	defer sender.Stop(wg, conn)
 
 	sender.spawnPublisher(conn)
-	wg := &sync.WaitGroup{}
-	defer wg.Wait()
 	sender.publisher.Start(wg)
 
 	for msg := range sender.ToSend {
@@ -54,7 +54,7 @@ func (sender *SimpleSender) StartBlocking() {
 		sender.publisher.ToPublish <- msg
 		sender.messages++
 	}
-	sender.Stop()
+	log.Infof("SimpleSender finishing up, published %v messages\n", sender.messages)
 }
 
 // Start asychronously calls StartBlocking via Gorouting
@@ -67,7 +67,8 @@ func (sender *SimpleSender) Start(wg *sync.WaitGroup) {
 }
 
 // Stop finishes up and notifies the user of its progress
-func (sender *SimpleSender) Stop() {
-	log.Infof("SimpleSender finishing up, published %v messages\n", sender.messages)
+func (sender *SimpleSender) Stop(wg *sync.WaitGroup, conn *amqp.Connection) {
 	close(sender.publisher.ToPublish)
+	wg.Wait()
+	conn.Close()
 }

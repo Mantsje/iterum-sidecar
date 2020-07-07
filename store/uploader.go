@@ -3,13 +3,12 @@ package store
 import (
 	"sync"
 
-	"github.com/prometheus/common/log"
-
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/iterum-provenance/iterum-go/minio"
 	"github.com/iterum-provenance/iterum-go/transmit"
 	"github.com/iterum-provenance/sidecar/env/config"
 	"github.com/iterum-provenance/sidecar/garbage"
+	"github.com/prometheus/common/log"
 )
 
 // Uploader is a struct responsible for uploading a single fragment to the minio client
@@ -73,7 +72,7 @@ func (u *Uploader) completionTracker(wg *sync.WaitGroup) {
 
 func (u *Uploader) upload(descriptor desc.LocalFileDesc, wg *sync.WaitGroup) {
 	defer wg.Done()
-	remoteFile, err := u.Minio.PutFile(descriptor)
+	remoteFile, err := u.Minio.PutFile(descriptor, true)
 	if err != nil {
 		log.Errorf("Upload failed due to: '%v'\n", err)
 	}

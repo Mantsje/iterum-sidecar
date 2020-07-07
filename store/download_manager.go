@@ -2,13 +2,13 @@ package store
 
 import (
 	"sync"
+	"time"
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/iterum-provenance/iterum-go/env"
 	"github.com/iterum-provenance/iterum-go/minio"
-	"github.com/prometheus/common/log"
-
 	"github.com/iterum-provenance/iterum-go/transmit"
+	"github.com/prometheus/common/log"
 )
 
 // DownloadManager is the structure that consumes RemoteFragmentDesc structures and downloads them
@@ -27,6 +27,7 @@ func NewDownloadManager(minio minio.Config, toDownload, completed chan transmit.
 
 // StartBlocking enters an endless loop consuming RemoteFragmentDescs and downloading the associated data
 func (dm DownloadManager) StartBlocking() {
+	startTime := time.Now()
 	var wg sync.WaitGroup
 	for {
 		msg, ok := <-dm.ToDownload
@@ -43,6 +44,7 @@ func (dm DownloadManager) StartBlocking() {
 	}
 	wg.Wait()
 	dm.Stop()
+	log.Infof("DownloadManager ran for %v", time.Now().Sub(startTime))
 }
 
 // Start asychronously calls StartBlocking via a Goroutine

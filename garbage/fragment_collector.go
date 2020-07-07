@@ -41,6 +41,7 @@ func (fgb *FragmentCollector) deleteFromDisk(frag *desc.LocalFragmentDesc) {
 // one channel for fragments to track,
 // and one for unneeded ones that can now be removed
 func (fgb *FragmentCollector) StartBlocking() {
+	log.Infoln("FragmentCollector starting")
 	for fgb.Track != nil || fgb.Collect != nil {
 		select {
 		// If a message comes in to be tracked it is safed until later

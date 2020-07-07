@@ -38,7 +38,7 @@ func NewSender(toSend, toLineate chan transmit.Serializable, brokerURL, targetQu
 
 func (sender *Sender) spawnPublisher(conn *amqp.Connection, targetQueue string) {
 	ch, err := conn.Channel() // Eventually closed by the QPublisher
-	util.Ensure(err, "Opened channel")
+	util.Ensure(err, "MQSender opened channel")
 	publisher := NewQPublisher(make(chan transmit.Serializable, 10), ch, targetQueue)
 	publisher.Start(sender.publisherGroup)
 	sender.Publishers[targetQueue] = publisher
@@ -46,9 +46,10 @@ func (sender *Sender) spawnPublisher(conn *amqp.Connection, targetQueue string) 
 
 // StartBlocking listens to the channel, and send remoteFragments to the message queue on the OUTPUT_QUEUE queue.
 func (sender *Sender) StartBlocking() {
-	log.Infof("Connecting to %s.\n", sender.BrokerURL)
+	defer sender.Stop()
+	log.Infof("MQSender connecting to %s.\n", sender.BrokerURL)
 	conn, err := amqp.Dial(sender.BrokerURL)
-	util.Ensure(err, "Connected to RabbitMQ")
+	util.Ensure(err, "MQSender Connected to RabbitMQ")
 	defer conn.Close()
 
 	sender.spawnPublisher(conn, sender.TargetQueue)
@@ -64,7 +65,7 @@ func (sender *Sender) StartBlocking() {
 			}
 		}
 
-		log.Debugf("Fragment sender sending %v to toLineate and Publisher\n", remoteFragment)
+		log.Debugf("MQSender sending %v to toLineate and Publisher\n", remoteFragment)
 		// Wrap in messagequeue specific struct
 		mqFragment := newFragmentDesc(remoteFragment)
 		// hand to publisher
@@ -73,8 +74,7 @@ func (sender *Sender) StartBlocking() {
 		sender.ToLineate <- &remoteFragment
 		sender.fragments++
 	}
-
-	sender.Stop()
+	log.Infof("MQSender finishing up, published %v messages\n", sender.fragments)
 }
 
 // Start asychronously calls StartBlocking via Gorouting
@@ -88,7 +88,6 @@ func (sender Sender) Start(wg *sync.WaitGroup) {
 
 // Stop finishes up and notifies the user of its progress
 func (sender Sender) Stop() {
-	log.Infof("MQSender finishing up, published %v messages\n", sender.fragments)
 	close(sender.ToLineate)
 	for _, pub := range sender.Publishers {
 		close(pub.ToPublish)

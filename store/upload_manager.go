@@ -2,13 +2,13 @@ package store
 
 import (
 	"sync"
+	"time"
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/iterum-provenance/iterum-go/minio"
 	"github.com/iterum-provenance/iterum-go/transmit"
 	"github.com/iterum-provenance/sidecar/env/config"
 	"github.com/iterum-provenance/sidecar/garbage"
-
 	"github.com/prometheus/common/log"
 )
 
@@ -40,12 +40,9 @@ func NewUploadManager(minio minio.Config, toUpload, completed chan transmit.Seri
 
 // StartBlocking enters an endless loop consuming LocalFragmentDesc and uploading the associated data
 func (um UploadManager) StartBlocking() {
+	startTime := time.Now()
 	var wg sync.WaitGroup
-	for {
-		msg, ok := <-um.ToUpload
-		if !ok {
-			break
-		}
+	for msg := range um.ToUpload {
 		uloader := NewUploader(*msg.(*desc.LocalFragmentDesc), um.Minio, um.Completed, um.sidecarConfig, um.fragCollector)
 
 		if um.strictOrdering {
@@ -58,6 +55,7 @@ func (um UploadManager) StartBlocking() {
 	}
 	wg.Wait()
 	um.Stop()
+	log.Infof("UploadManager ran for %v", time.Now().Sub(startTime))
 }
 
 // Start asychronously calls StartBlocking via a Goroutine
