@@ -2,9 +2,11 @@ package env
 
 import (
 	"os"
+	"path"
 	"strings"
 
 	"github.com/iterum-provenance/iterum-go/env"
+	"github.com/iterum-provenance/iterum-go/process"
 	"github.com/iterum-provenance/iterum-go/util"
 	"github.com/iterum-provenance/sidecar/env/config"
 	"github.com/prometheus/common/log"
@@ -16,10 +18,10 @@ const (
 )
 
 // TransformationStepInputSocket is the path to the socket used for transformation step input
-var TransformationStepInputSocket = env.DataVolumePath + "/" + os.Getenv(inputSocketEnv)
+var TransformationStepInputSocket = path.Join(process.DataVolumePath, os.Getenv(inputSocketEnv))
 
 // TransformationStepOutputSocket is the path to the socket used for transformation step output
-var TransformationStepOutputSocket = env.DataVolumePath + "/" + os.Getenv(outputSocketEnv)
+var TransformationStepOutputSocket = path.Join(process.DataVolumePath, os.Getenv(outputSocketEnv))
 
 // SidecarConfig , if it exists, contains additional configuration information for the sidecar
 var SidecarConfig *config.Config = nil
@@ -34,13 +36,11 @@ func VerifySidecarEnvs() error {
 	return nil
 }
 
-// VerifySidecarConfig verifies the config struct of the sidecar
+// VerifySidecarConfig parses and verifies the config struct of the sidecar
 func VerifySidecarConfig() error {
-	if env.ProcessConfig == "" {
-		log.Infoln("Sidecar was initialized without additional config, make sure that this was intended")
-	} else {
+	if process.Config != "" {
 		c := config.Config{}
-		errConfig := c.FromString(env.ProcessConfig)
+		errConfig := c.FromString(process.Config)
 		if errConfig != nil {
 			return errConfig
 		}
@@ -50,13 +50,10 @@ func VerifySidecarConfig() error {
 }
 
 func init() {
-	errIterum := env.VerifyIterumEnvs()
-	errMinio := env.VerifyMinioEnvs()
-	errMessageq := env.VerifyMessageQueueEnvs()
 	errSidecar := VerifySidecarEnvs()
 	errSidecarConf := VerifySidecarConfig()
 
-	err := util.ReturnFirstErr(errIterum, errMinio, errMessageq, errSidecar, errSidecarConf)
+	err := util.ReturnFirstErr(errSidecar, errSidecarConf)
 	if err != nil {
 		log.Fatalln(err)
 	}

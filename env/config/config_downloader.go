@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
-	"github.com/iterum-provenance/iterum-go/env"
 	"github.com/iterum-provenance/iterum-go/minio"
+	"github.com/iterum-provenance/iterum-go/process"
 	"github.com/iterum-provenance/iterum-go/util"
 	"github.com/prometheus/common/log"
 )
@@ -52,8 +52,10 @@ func (cd *Downloader) StartBlocking() {
 	log.Infof("Starting to download %v config files", len(cd.toDownload))
 	wg := &sync.WaitGroup{}
 	// Ensure that the directory exists
-	err := os.MkdirAll(env.ProcessConfigPath, os.ModePerm)
-	util.LogIfError(err)
+	err := os.MkdirAll(process.ConfigPath, os.ModePerm)
+	if err != nil {
+		log.Errorln(err)
+	}
 
 	// Start the downloading of each config file
 	for _, file := range cd.toDownload {

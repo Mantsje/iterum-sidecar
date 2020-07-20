@@ -3,15 +3,15 @@ package main
 import (
 	"sync"
 
-	envcomm "github.com/iterum-provenance/iterum-go/env"
+	"github.com/iterum-provenance/iterum-go/manager"
 	"github.com/iterum-provenance/iterum-go/minio"
+	"github.com/iterum-provenance/iterum-go/process"
 	"github.com/iterum-provenance/iterum-go/transmit"
 	"github.com/iterum-provenance/iterum-go/util"
 	"github.com/iterum-provenance/sidecar/env"
 	"github.com/iterum-provenance/sidecar/env/config"
 	"github.com/iterum-provenance/sidecar/garbage"
 	"github.com/iterum-provenance/sidecar/lineage"
-	"github.com/iterum-provenance/sidecar/manager"
 	"github.com/iterum-provenance/sidecar/messageq"
 	"github.com/iterum-provenance/sidecar/socket"
 	"github.com/iterum-provenance/sidecar/store"
@@ -33,7 +33,6 @@ func main() {
 
 	uploaderMqBridgeBufferSize := 10
 	uploaderMqBridge := make(chan transmit.Serializable, uploaderMqBridgeBufferSize)
-
 	socketAcknowledgerBridgeBufferSize := 10
 	socketAcknowledgerBridge := make(chan transmit.Serializable, socketAcknowledgerBridgeBufferSize)
 
@@ -56,12 +55,11 @@ func main() {
 	fromSocket.Start(&wg)
 
 	// Download manager setup
-	minioConfigDown, err := minio.NewMinioConfigFromEnv() // defaults to an output setup
-	util.PanicIfErr(err, "")
-	minioConfigDown.TargetBucket = "INVALID" // adjust such that the target output is unusable
+	minioConfigDown := minio.NewMinioConfigFromEnv() // defaults to an output setup
+	minioConfigDown.TargetBucket = "INVALID"         // adjust such that the target output is unusable
 	err = minioConfigDown.Connect()
 	util.PanicIfErr(err, "")
-	downloadManager := store.NewDownloadManager(minioConfigDown, mqDownloaderBridge, downloaderSocketBridge)
+	downloadManager := store.NewDownloadManager(minioConfigDown, process.DataVolumePath, mqDownloaderBridge, downloaderSocketBridge)
 	downloadManager.Start(&wg)
 
 	configDownloader := config.NewDownloader(env.SidecarConfig, minioConfigDown)
@@ -69,18 +67,17 @@ func main() {
 
 	// Upload manager setup
 	// Define and connect to minio storage
-	minioConfigUp, err := minio.NewMinioConfigFromEnv() // defaults to an output setup
-	util.PanicIfErr(err, "")
+	minioConfigUp := minio.NewMinioConfigFromEnv() // defaults to an output setup
 	err = minioConfigUp.Connect()
 	util.PanicIfErr(err, "")
 	uploadManager := store.NewUploadManager(minioConfigUp, socketUploaderBridge, uploaderMqBridge, env.SidecarConfig, fragCollector)
 	uploadManager.Start(&wg)
 
 	// MessageQueue setup
-	brokerURL := envcomm.MQBrokerURL
-	outputQueue := envcomm.MQOutputQueue
-	inputQueue := envcomm.MQInputQueue
-	prefetchCount := envcomm.MQPrefetchCount
+	brokerURL := messageq.BrokerURL
+	outputQueue := messageq.OutputQueue
+	inputQueue := messageq.InputQueue
+	prefetchCount := messageq.PrefetchCount
 
 	mqListener, err := messageq.NewListener(mqDownloaderBridge, socketAcknowledgerBridge, brokerURL, inputQueue, prefetchCount)
 	util.Ensure(err, "MessageQueue listener succesfully created and listening")
@@ -90,11 +87,11 @@ func main() {
 	util.Ensure(err, "MessageQueue sender succesfully created and listening")
 	mqSender.Start(&wg)
 
-	usChecker := manager.NewUpstreamChecker(envcomm.ManagerURL, envcomm.PipelineHash, envcomm.ProcessName, 5)
+	usChecker := manager.NewUpstreamChecker(manager.URL, process.PipelineHash, process.Name, 5)
 	usChecker.Start(&wg)
 	usChecker.Register <- mqListener.CanExit
 
-	lineageTracker := lineage.NewMqTracker(envcomm.ProcessName, envcomm.PipelineHash, brokerURL, mqLineageBridge)
+	lineageTracker := lineage.NewMqTracker(process.Name, process.PipelineHash, brokerURL, mqLineageBridge)
 	lineageTracker.Start(&wg)
 
 	wg.Wait()

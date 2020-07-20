@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
-	"github.com/iterum-provenance/iterum-go/env"
 	"github.com/iterum-provenance/iterum-go/minio"
 	"github.com/prometheus/common/log"
 
@@ -16,13 +15,14 @@ type DownloadManager struct {
 	ToDownload     chan transmit.Serializable // desc.RemoteFragmentDesc
 	Completed      chan transmit.Serializable // desc.LocalFragmentDesc
 	Minio          minio.Config
+	TargetFolder   string
 	fragments      int
 	strictOrdering bool
 }
 
 // NewDownloadManager creates a new downloadmanager and initiates a client of the Minio service
-func NewDownloadManager(minio minio.Config, toDownload, completed chan transmit.Serializable) DownloadManager {
-	return DownloadManager{toDownload, completed, minio, 0, false}
+func NewDownloadManager(minio minio.Config, folder string, toDownload, completed chan transmit.Serializable) DownloadManager {
+	return DownloadManager{toDownload, completed, minio, folder, 0, false}
 }
 
 // StartBlocking enters an endless loop consuming RemoteFragmentDescs and downloading the associated data
@@ -33,7 +33,7 @@ func (dm DownloadManager) StartBlocking() {
 		if !ok {
 			break
 		}
-		dloader := NewDownloader(*msg.(*desc.RemoteFragmentDesc), dm.Minio, dm.Completed, env.DataVolumePath)
+		dloader := NewDownloader(*msg.(*desc.RemoteFragmentDesc), dm.Minio, dm.Completed, dm.TargetFolder)
 		if dm.strictOrdering {
 			dloader.StartBlocking()
 		} else {

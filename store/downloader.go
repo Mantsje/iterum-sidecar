@@ -64,7 +64,7 @@ func (d Downloader) completionTracker(wg *sync.WaitGroup) {
 
 func (d Downloader) download(descriptor desc.RemoteFileDesc, wg *sync.WaitGroup) {
 	defer wg.Done()
-	localFileDesc, err := d.Minio.GetFile(descriptor, d.Folder)
+	localFileDesc, err := d.Minio.GetFile(descriptor, d.Folder, true)
 	if err != nil {
 		log.Errorf("Download failed due to: '%v'\n %s", err, fmt.Sprintf("Bucket: '%v', Name: '%v', Folder: '%v'", descriptor.Bucket, descriptor.Name, d.Folder))
 		return

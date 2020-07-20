@@ -73,7 +73,7 @@ func (u *Uploader) completionTracker(wg *sync.WaitGroup) {
 
 func (u *Uploader) upload(descriptor desc.LocalFileDesc, wg *sync.WaitGroup) {
 	defer wg.Done()
-	remoteFile, err := u.Minio.PutFile(descriptor)
+	remoteFile, err := u.Minio.PutFile(descriptor, true)
 	if err != nil {
 		log.Errorf("Upload failed due to: '%v'\n", err)
 	}
