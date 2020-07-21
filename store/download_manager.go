@@ -21,8 +21,13 @@ type DownloadManager struct {
 }
 
 // NewDownloadManager creates a new downloadmanager and initiates a client of the Minio service
-func NewDownloadManager(minio minio.Config, folder string, toDownload, completed chan transmit.Serializable) DownloadManager {
-	return DownloadManager{toDownload, completed, minio, folder, 0, false}
+func NewDownloadManager(folder string, toDownload, downloaded chan transmit.Serializable) DownloadManager {
+	minio := minio.NewMinioConfigFromEnv() // defaults to an upload setup
+	minio.TargetBucket = "INVALID"         // adjust such that the target output is unusable
+	if err := minio.Connect(); err != nil {
+		log.Fatal(err)
+	}
+	return DownloadManager{toDownload, downloaded, minio, folder, 0, false}
 }
 
 // StartBlocking enters an endless loop consuming RemoteFragmentDescs and downloading the associated data

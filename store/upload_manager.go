@@ -24,12 +24,16 @@ type UploadManager struct {
 }
 
 // NewUploadManager creates a new upload manager and initiates a client of the Minio service
-func NewUploadManager(minio minio.Config, toUpload, completed chan transmit.Serializable,
+func NewUploadManager(toUpload, uploaded chan transmit.Serializable,
 	sidecarConfig *config.Config, collector garbage.FragmentCollector) UploadManager {
 
+	minio := minio.NewMinioConfigFromEnv() // defaults to an upload setup
+	if err := minio.Connect(); err != nil {
+		log.Fatal(err)
+	}
 	return UploadManager{
 		toUpload,
-		completed,
+		uploaded,
 		minio,
 		sidecarConfig,
 		0,

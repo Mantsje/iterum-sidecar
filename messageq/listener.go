@@ -24,9 +24,9 @@ type Listener struct {
 }
 
 // NewListener creates a new message queue listener
-func NewListener(output, finishedFragments chan transmit.Serializable, brokerURL, inputQueue string, prefetchCount int) (listener Listener, err error) {
+func NewListener(output, toAcknowledge chan transmit.Serializable, brokerURL, inputQueue string, prefetchCount int) (listener Listener, err error) {
 	consumer := NewConsumer(output, nil, inputQueue)
-	acknowledger := NewAcknowledger(consumer.ToAcknowledge, finishedFragments)
+	acknowledger := NewAcknowledger(consumer.Unacked, toAcknowledge)
 
 	listener = Listener{
 		BrokerURL:     brokerURL,

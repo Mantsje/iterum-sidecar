@@ -12,12 +12,12 @@ import (
 
 // Consumer consumes messages from the messagequeue without acknowledging them
 type Consumer struct {
-	Output        chan<- transmit.Serializable // *desc.RemoteFragmentDesc
-	ToAcknowledge chan amqp.Delivery
-	Exit          chan bool
-	mqChannel     *amqp.Channel
-	QueueName     string
-	consumed      int
+	Output    chan<- transmit.Serializable // *desc.RemoteFragmentDesc
+	Unacked   chan amqp.Delivery
+	Exit      chan bool
+	mqChannel *amqp.Channel
+	QueueName string
+	consumed  int
 }
 
 // NewConsumer creates a message consumer for a listener
@@ -42,7 +42,7 @@ func (consumer *Consumer) handleRemoteFragment(message amqp.Delivery) {
 	var remoteFragment = mqFragment.RemoteFragmentDesc
 
 	consumer.Output <- &remoteFragment
-	consumer.ToAcknowledge <- message
+	consumer.Unacked <- message
 }
 
 // StartBlocking listens on the rabbitMQ messagequeue and redirects messages on the INPUT_QUEUE to a channel
@@ -100,5 +100,5 @@ func (consumer *Consumer) Start(wg *sync.WaitGroup) {
 func (consumer *Consumer) Stop() {
 	log.Infof("MQConsumer finishing up, consumed %v messages\n", consumer.consumed)
 	close(consumer.Output)
-	close(consumer.ToAcknowledge)
+	close(consumer.Unacked)
 }

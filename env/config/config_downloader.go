@@ -20,7 +20,12 @@ type Downloader struct {
 }
 
 // NewDownloader instantiates a new config downloader without starting it
-func NewDownloader(config *Config, minio minio.Config) Downloader {
+func NewDownloader(config *Config) Downloader {
+	minio := minio.NewMinioConfigFromEnv() // defaults to an upload setup
+	minio.TargetBucket = "INVALID"         // adjust such that the target output is unusable
+	if err := minio.Connect(); err != nil {
+		log.Fatal(err)
+	}
 	return Downloader{
 		toDownload: []string{},
 		Config:     config,
