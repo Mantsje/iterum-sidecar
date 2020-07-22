@@ -1,9 +1,7 @@
 package socket
 
 import (
-	"fmt"
 	"net"
-	"time"
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/iterum-provenance/sidecar/garbage"
@@ -48,21 +46,5 @@ func SendFileHandler(fragCollector garbage.FragmentCollector) func(socket Socket
 				break
 			}
 		}
-	}
-}
-
-// Producer is a dummy setup to help test socket
-func Producer(channel chan transmit.Serializable) {
-	fileIdx := 0
-	for {
-		time.Sleep(1 * time.Second)
-		dummyName := fmt.Sprintf("file%d.txt", fileIdx)
-		dummyFile := desc.LocalFileDesc{LocalPath: "./input/bucket/" + dummyName, Name: dummyName}
-		dummyFiles := []desc.LocalFileDesc{dummyFile}
-		dummyFragmentDesc := newFragmentDesc(dummyFiles)
-		fmt.Printf("putting fragment on channel:'%v'\n", dummyFragmentDesc)
-		channel <- &dummyFragmentDesc
-
-		fileIdx++
 	}
 }

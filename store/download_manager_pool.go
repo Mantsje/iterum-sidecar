@@ -5,7 +5,6 @@ import (
 	"time"
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
-	"github.com/iterum-provenance/iterum-go/env"
 	"github.com/iterum-provenance/iterum-go/minio"
 	"github.com/iterum-provenance/iterum-go/transmit"
 	"github.com/prometheus/common/log"
@@ -16,16 +15,23 @@ type DownloadManagerPool struct {
 	ToDownload     chan transmit.Serializable // desc.RemoteFragmentDesc
 	Completed      chan transmit.Serializable // desc.LocalFragmentDesc
 	pool           DownloadPool
+	targetFolder   string
 	fragments      int
 	strictOrdering bool
 }
 
 // NewDownloadManagerPool creates a new downloadmanager and initiates a client of the Minio service
-func NewDownloadManagerPool(minio minio.Config, toDownload, completed chan transmit.Serializable) DownloadManagerPool {
+func NewDownloadManagerPool(toDownload, completed chan transmit.Serializable, folder string) DownloadManagerPool {
+	minio := minio.NewMinioConfigFromEnv() // defaults to an upload setup
+	minio.TargetBucket = "INVALID"         // adjust such that the target output is unusable
+	if err := minio.Connect(); err != nil {
+		log.Fatal(err)
+	}
 	return DownloadManagerPool{
 		toDownload,
 		completed,
 		NewDownloadPool(10, minio),
+		folder,
 		0,
 		false,
 	}
@@ -33,15 +39,13 @@ func NewDownloadManagerPool(minio minio.Config, toDownload, completed chan trans
 
 // StartBlocking enters an endless loop consuming RemoteFragmentDescs and downloading the associated data
 func (dm DownloadManagerPool) StartBlocking() {
-	startTime := time.Now()
-
 	log.Infoln("DownloadManagerPool starting")
 	var poolGroup sync.WaitGroup
 	dm.pool.Start(&poolGroup)
 	var downloaderGroup sync.WaitGroup
 	for msg := range dm.ToDownload {
 		rfd := *msg.(*desc.RemoteFragmentDesc)
-		dloader := NewFragmentDownloader(rfd, &dm.pool, dm.Completed, env.DataVolumePath)
+		dloader := NewFragmentDownloader(rfd, &dm.pool, dm.Completed, dm.targetFolder)
 		if dm.strictOrdering {
 			dloader.StartBlocking()
 		} else {
@@ -55,7 +59,6 @@ func (dm DownloadManagerPool) StartBlocking() {
 	poolGroup.Wait()
 	log.Infof("DownloadManagerPool finishing up, (tried to) download(ed) %v fragments", dm.fragments)
 	close(dm.Completed)
-	log.Infof("DownloadManagerPoolRan for %v", time.Now().Sub(startTime))
 }
 
 // Start asychronously calls StartBlocking via a Goroutine
@@ -63,6 +66,8 @@ func (dm DownloadManagerPool) Start(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		startTime := time.Now()
 		dm.StartBlocking()
+		log.Infof("dmanagerpool ran for %v", time.Now().Sub(startTime))
 	}()
 }

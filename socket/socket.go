@@ -4,6 +4,7 @@ import (
 	"net"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/prometheus/common/log"
 
@@ -27,7 +28,7 @@ type ConnHandler func(Socket, net.Conn)
 
 // NewSocket sets up a listener at the given socketPath and links the passed channel
 // with the given bufferSize. It returns an error on failure
-func NewSocket(socketPath string, channel chan transmit.Serializable, handler ConnHandler) (s Socket, err error) {
+func NewSocket(socketPath string, channel chan transmit.Serializable, handler ConnHandler) (socket Socket, err error) {
 	defer util.ReturnErrOnPanic(&err)
 	if _, errExist := os.Stat(socketPath); !os.IsNotExist(errExist) {
 		err = os.Remove(socketPath)
@@ -37,7 +38,7 @@ func NewSocket(socketPath string, channel chan transmit.Serializable, handler Co
 	listener, err := net.Listen("unix", socketPath)
 	util.Ensure(err, "Server created")
 
-	s = Socket{
+	socket = Socket{
 		listener,
 		channel,
 		handler,
@@ -48,11 +49,11 @@ func NewSocket(socketPath string, channel chan transmit.Serializable, handler Co
 
 // StartBlocking enters an endless loop accepting connections and calling the handler function
 // in a goroutine
-func (s Socket) StartBlocking() {
+func (socket Socket) StartBlocking() {
 	for {
-		conn, err := s.Listener.Accept()
+		conn, err := socket.Listener.Accept()
 		select {
-		case <-s.stop:
+		case <-socket.stop:
 			// If we were told to stop (an error would occur, but this is expected)
 			return
 		default:
@@ -62,23 +63,25 @@ func (s Socket) StartBlocking() {
 				return
 			}
 			defer conn.Close()
-			go s.handler(s, conn)
+			go socket.handler(socket, conn)
 		}
 	}
 }
 
 // Start asychronously calls StartBlocking via Gorouting
-func (s Socket) Start(wg *sync.WaitGroup) {
+func (socket Socket) Start(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		s.StartBlocking()
+		startTime := time.Now()
+		socket.StartBlocking()
+		log.Infof("s ran for %v", time.Now().Sub(startTime))
 	}()
 }
 
 // Stop tries to close the listener of the socket and returns an error on failure
-func (s *Socket) Stop() error {
+func (socket *Socket) Stop() error {
 	log.Infoln("Stopping socket server...")
-	s.stop <- true
-	return s.Listener.Close()
+	socket.stop <- true
+	return socket.Listener.Close()
 }

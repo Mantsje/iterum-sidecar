@@ -2,6 +2,7 @@ package lineage
 
 import (
 	"sync"
+	"time"
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/iterum-provenance/iterum-go/transmit"
@@ -49,6 +50,8 @@ func (tracker MqTracker) Start(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		startTime := time.Now()
 		tracker.StartBlocking()
+		log.Infof("tracker ran for %v", time.Now().Sub(startTime))
 	}()
 }

@@ -3,6 +3,7 @@ package garbage
 import (
 	"os"
 	"sync"
+	"time"
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/prometheus/common/log"
@@ -28,7 +29,7 @@ func NewFragmentCollector() FragmentCollector {
 	}
 }
 
-func (fgb *FragmentCollector) deleteFromDisk(frag *desc.LocalFragmentDesc) {
+func (fgarbage *FragmentCollector) deleteFromDisk(frag *desc.LocalFragmentDesc) {
 	for _, fileDesc := range frag.Files {
 		err := os.Remove(fileDesc.LocalPath)
 		if err != nil {
@@ -40,45 +41,45 @@ func (fgb *FragmentCollector) deleteFromDisk(frag *desc.LocalFragmentDesc) {
 // StartBlocking listens on the two channels for new messages:
 // one channel for fragments to track,
 // and one for unneeded ones that can now be removed
-func (fgb *FragmentCollector) StartBlocking() {
+func (fgarbage *FragmentCollector) StartBlocking() {
 	log.Infoln("FragmentCollector starting")
-	for fgb.Track != nil || fgb.Collect != nil {
+	for fgarbage.Track != nil || fgarbage.Collect != nil {
 		select {
 		// If a message comes in to be tracked it is safed until later
-		case fragDesc, ok := <-fgb.Track:
+		case fragDesc, ok := <-fgarbage.Track:
 			if !ok {
 				log.Infof("ToTrack channel of FragmentCollector was closed")
-				fgb.Track = nil
+				fgarbage.Track = nil
 				continue
 			}
-			fgb.backlog[fragDesc.Metadata.FragmentID] = fragDesc
+			fgarbage.backlog[fragDesc.Metadata.FragmentID] = fragDesc
 		// If a message comes in to be collected it is ready to be deleted from the disk
-		case fragID, ok := <-fgb.Collect:
+		case fragID, ok := <-fgarbage.Collect:
 			if !ok {
 				log.Infof("CollectGarbage channel of FragmentCollector was closed")
-				fgb.Collect = nil
+				fgarbage.Collect = nil
 				continue
 			}
-			if _, ok := fgb.backlog[fragID]; !ok {
+			if _, ok := fgarbage.backlog[fragID]; !ok {
 				log.Warnf("FragmentCollector got a fragmentID that was not tracked: '%v', if problematic, will result in an error log later", fragID)
-				fgb.untracked = append(fgb.untracked, fragID)
+				fgarbage.untracked = append(fgarbage.untracked, fragID)
 				continue
 			}
-			go fgb.deleteFromDisk(fgb.backlog[fragID])
-			delete(fgb.backlog, fragID)
+			go fgarbage.deleteFromDisk(fgarbage.backlog[fragID])
+			delete(fgarbage.backlog, fragID)
 		}
 	}
-	if len(fgb.backlog) != 0 {
+	if len(fgarbage.backlog) != 0 {
 		// Remove all untracked ids
-		for _, untrackedID := range fgb.untracked {
-			if _, ok := fgb.backlog[untrackedID]; !ok {
+		for _, untrackedID := range fgarbage.untracked {
+			if _, ok := fgarbage.backlog[untrackedID]; !ok {
 				log.Errorf("Untracked ID never showed up in FragmentCollector backlog: '%v'", untrackedID)
 			} else {
-				delete(fgb.backlog, untrackedID)
+				delete(fgarbage.backlog, untrackedID)
 			}
 		}
 		// If the backlog is still empty, there was an actual problem
-		if len(fgb.backlog) != 0 {
+		if len(fgarbage.backlog) != 0 {
 			log.Errorln("FragmenterGarbageCollector.backlog is not empty at end of lifecycle, unremoved files remain")
 		}
 	}
@@ -86,10 +87,12 @@ func (fgb *FragmentCollector) StartBlocking() {
 }
 
 // Start asychronously calls StartBlocking via Gorouting
-func (fgb *FragmentCollector) Start(wg *sync.WaitGroup) {
+func (fgarbage *FragmentCollector) Start(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		fgb.StartBlocking()
+		startTime := time.Now()
+		fgarbage.StartBlocking()
+		log.Infof("fgarbage ran for %v", time.Now().Sub(startTime))
 	}()
 }

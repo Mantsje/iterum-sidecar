@@ -4,115 +4,108 @@ import (
 	"sync"
 	"time"
 
-	envcomm "github.com/iterum-provenance/iterum-go/env"
-	"github.com/iterum-provenance/iterum-go/minio"
+	"github.com/iterum-provenance/iterum-go/manager"
+	"github.com/iterum-provenance/iterum-go/process"
 	"github.com/iterum-provenance/iterum-go/transmit"
 	"github.com/iterum-provenance/iterum-go/util"
 	"github.com/iterum-provenance/sidecar/env"
 	"github.com/iterum-provenance/sidecar/env/config"
 	"github.com/iterum-provenance/sidecar/garbage"
 	"github.com/iterum-provenance/sidecar/lineage"
-	"github.com/iterum-provenance/sidecar/manager"
-	"github.com/iterum-provenance/sidecar/messageq"
+	mq "github.com/iterum-provenance/sidecar/messageq"
 	"github.com/iterum-provenance/sidecar/socket"
 	"github.com/iterum-provenance/sidecar/store"
 	"github.com/prometheus/common/log"
 )
 
 func main() {
-	startTime := time.Now()
-
 	// log.Base().SetLevel("Debug")
-
-	// defer func() { // Allow time to copy the profile file
-	// 	log.Infoln("Sleeping for 60 seconds...")
-	// 	time.Sleep(time.Second * 60)
-	// 	log.Infoln("Done")
-	// }()
-	// defer profile.Start(profile.MemProfile).Stop()
-	// defer profile.Start(profile.CPUProfile).Stop()
-
+	// log.Base().SetLevel("Info")
+	startTime := time.Now()
 	var wg sync.WaitGroup
 
+	// Pass remote fragments from the message queue listener to the downloader
 	mqDownloaderBridgeBufferSize := 10
 	mqDownloaderBridge := make(chan transmit.Serializable, mqDownloaderBridgeBufferSize)
 
+	// After downloading messages, pass the local fragment descriptions on to the transformation
 	downloaderSocketBridgeBufferSize := 10
 	downloaderSocketBridge := make(chan transmit.Serializable, downloaderSocketBridgeBufferSize)
 
+	// After the transformation is done, pass the output local fragment description to the uploader
 	socketUploaderBridgeBufferSize := 10
 	socketUploaderBridge := make(chan transmit.Serializable, socketUploaderBridgeBufferSize)
 
+	// After uploading pass the remote fragment description on to the message queue publisher
 	uploaderMqBridgeBufferSize := 10
 	uploaderMqBridge := make(chan transmit.Serializable, uploaderMqBridgeBufferSize)
 
+	// Acknowledge consumed messages only after they have completely been processed
 	socketAcknowledgerBridgeBufferSize := 10
 	socketAcknowledgerBridge := make(chan transmit.Serializable, socketAcknowledgerBridgeBufferSize)
 
+	// Post lineage information for each processed fragment
 	mqLineageBridgeBufferSize := 10
 	mqLineageBridge := make(chan transmit.Serializable, mqLineageBridgeBufferSize)
 
+	// MessageQueue setup
+	brokerURL := mq.BrokerURL
+	outputQueue := mq.OutputQueue
+	inputQueue := mq.InputQueue
+	prefetchCount := mq.PrefetchCount
+
+	// ######################## ######################## ######################## \\
+
+	// Delete fragments from the shared volume once we're done processing them
 	fragCollector := garbage.NewFragmentCollector()
 	fragCollector.Start(&wg)
 
-	// Socket setup
-	toSocketFile := env.TransformationStepInputSocket
-	fromSocketFile := env.TransformationStepOutputSocket
-
-	toSocket, err := socket.NewSocket(toSocketFile, downloaderSocketBridge, socket.SendFileHandler(fragCollector))
-	util.Ensure(err, "Towards Socket succesfully opened and listening")
-	toSocket.Start(&wg)
-
-	fromSocket, err := socket.NewSocket(fromSocketFile, socketUploaderBridge, socket.ProcessedFileHandler(socketAcknowledgerBridge, fragCollector))
-	util.Ensure(err, "From Socket succesfully opened and listening")
-	fromSocket.Start(&wg)
-
-	// Download manager setup
-	minioConfigDown, err := minio.NewMinioConfigFromEnv() // defaults to an output/upload setup
-	util.PanicIfErr(err, "")
-	minioConfigDown.TargetBucket = "INVALID" // adjust such that the target output is unusable
-	err = minioConfigDown.Connect()
-	util.PanicIfErr(err, "")
-	downloadManager := store.NewDownloadManager(minioConfigDown, mqDownloaderBridge, downloaderSocketBridge)
-	// downloadManager := store.NewDownloadManagerPool(minioConfigDown, mqDownloaderBridge, downloaderSocketBridge)
-	downloadManager.Start(&wg)
-
-	configDownloader := config.NewDownloader(env.SidecarConfig, minioConfigDown)
-	configDownloader.Start(&wg)
-
-	// Upload manager setup
-	// Define and connect to minio storage
-	minioConfigUp, err := minio.NewMinioConfigFromEnv() // defaults to an output setup
-	util.PanicIfErr(err, "")
-	err = minioConfigUp.Connect()
-	util.PanicIfErr(err, "")
-	uploadManager := store.NewUploadManager(minioConfigUp, socketUploaderBridge, uploaderMqBridge, env.SidecarConfig, fragCollector)
-	// uploadManager := store.NewUploadManagerPool(minioConfigUp, socketUploaderBridge, uploaderMqBridge, env.SidecarConfig, &fragCollector)
-	uploadManager.Start(&wg)
-
-	// MessageQueue setup
-	brokerURL := envcomm.MQBrokerURL
-	outputQueue := envcomm.MQOutputQueue
-	inputQueue := envcomm.MQInputQueue
-	prefetchCount := envcomm.MQPrefetchCount
-
-	mqListener, err := messageq.NewListener(mqDownloaderBridge, socketAcknowledgerBridge, brokerURL, inputQueue, prefetchCount)
+	// Consume incoming messages from the message queue
+	mqListener, err := mq.NewListener(mqDownloaderBridge, socketAcknowledgerBridge, brokerURL, inputQueue, prefetchCount)
 	util.Ensure(err, "MessageQueue listener succesfully created and listening")
 	mqListener.Start(&wg)
 
-	mqSender, err := messageq.NewSender(uploaderMqBridge, mqLineageBridge, brokerURL, outputQueue)
+	// Associated file downloader
+	downloadManager := store.NewDownloadManagerPool(mqDownloaderBridge, downloaderSocketBridge, process.DataVolumePath)
+
+	downloadManager.Start(&wg)
+
+	// Pass local fragment description to transformation
+	toSocketFile := env.TransformationStepInputSocket
+	outboundFragmentHandler := socket.SendFileHandler(fragCollector)
+	toSocket, err := socket.NewSocket(toSocketFile, downloaderSocketBridge, outboundFragmentHandler)
+	util.Ensure(err, "Outbound socket towards transformation succesfully opened and listening")
+	toSocket.Start(&wg)
+
+	// Receive processed fragment descriptions
+	fromSocketFile := env.TransformationStepOutputSocket
+	inboundFragmentHandler := socket.ProcessedFileHandler(socketAcknowledgerBridge, fragCollector)
+	fromSocket, err := socket.NewSocket(fromSocketFile, socketUploaderBridge, inboundFragmentHandler)
+	util.Ensure(err, "Inbound socket from transformation succesfully opened and listening")
+	fromSocket.Start(&wg)
+
+	// Upload processed fragment data
+	uploadManager := store.NewUploadManagerPool(socketUploaderBridge, uploaderMqBridge, env.SidecarConfig, &fragCollector)
+	uploadManager.Start(&wg)
+
+	// Post remote fragment descriptions
+	mqSender, err := mq.NewSender(uploaderMqBridge, mqLineageBridge, brokerURL, outputQueue)
 	util.Ensure(err, "MessageQueue sender succesfully created and listening")
 	mqSender.Start(&wg)
 
-	usChecker := manager.NewUpstreamChecker(envcomm.ManagerURL, envcomm.PipelineHash, envcomm.ProcessName, 5)
+	// Check regularly whether previous steps in the pipeline have completed
+	usChecker := manager.NewUpstreamChecker(manager.URL, process.PipelineHash, process.Name, 5)
 	usChecker.Start(&wg)
 	usChecker.Register <- mqListener.CanExit
 
-	lineageTracker := lineage.NewMqTracker(envcomm.ProcessName, envcomm.PipelineHash, brokerURL, mqLineageBridge)
+	// Download files that should be used as configuration files first
+	configDownloader := config.NewDownloader(env.SidecarConfig)
+	configDownloader.Start(&wg)
+
+	// Track lineage information by posting it on a message queue
+	lineageTracker := lineage.NewMqTracker(process.Name, process.PipelineHash, brokerURL, mqLineageBridge)
 	lineageTracker.Start(&wg)
 
 	wg.Wait()
-	log.Infoln("Sidecar successfully awaited all goroutines")
-
 	log.Infof("Ran for %v", time.Now().Sub(startTime))
 }

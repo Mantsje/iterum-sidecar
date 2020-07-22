@@ -3,6 +3,7 @@ package messageq
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/iterum-provenance/iterum-go/transmit"
 	"github.com/iterum-provenance/iterum-go/util"
@@ -81,7 +82,9 @@ func (qpublisher *QPublisher) Start(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		startTime := time.Now()
 		qpublisher.StartBlocking()
+		log.Infof("qpublisher ran for %v", time.Now().Sub(startTime))
 	}()
 }
 

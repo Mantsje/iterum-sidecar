@@ -24,9 +24,9 @@ type Listener struct {
 }
 
 // NewListener creates a new message queue listener
-func NewListener(output, finishedFragments chan transmit.Serializable, brokerURL, inputQueue string, prefetchCount int) (listener Listener, err error) {
+func NewListener(output, toAcknowledge chan transmit.Serializable, brokerURL, inputQueue string, prefetchCount int) (listener Listener, err error) {
 	consumer := NewConsumer(output, nil, inputQueue)
-	acknowledger := NewAcknowledger(consumer.ToAcknowledge, finishedFragments)
+	acknowledger := NewAcknowledger(consumer.Unacked, toAcknowledge)
 
 	listener = Listener{
 		BrokerURL:     brokerURL,
@@ -106,6 +106,8 @@ func (listener *Listener) Start(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		listener.StartBlocking()
+		startTime := time.Now()
+        listener.StartBlocking()
+	    log.Infof("listener ran for %v", time.Now().Sub(startTime))
 	}()
 }

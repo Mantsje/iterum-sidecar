@@ -24,9 +24,13 @@ type UploadManagerPool struct {
 }
 
 // NewUploadManagerPool creates a new uploaumanager and initiates a client of the Minio service
-func NewUploadManagerPool(minio minio.Config, toUpload, completed chan transmit.Serializable,
+func NewUploadManagerPool(toUpload, completed chan transmit.Serializable,
 	sidecarConfig *config.Config, collector *garbage.FragmentCollector,
 ) UploadManagerPool {
+	minio := minio.NewMinioConfigFromEnv() // defaults to an upload setup
+	if err := minio.Connect(); err != nil {
+		log.Fatal(err)
+	}
 	return UploadManagerPool{
 		toUpload,
 		completed,
@@ -40,7 +44,6 @@ func NewUploadManagerPool(minio minio.Config, toUpload, completed chan transmit.
 
 // StartBlocking enters an endless loop consuming RemoteFragmentDescs and uploading the associated data
 func (um UploadManagerPool) StartBlocking() {
-	startTime := time.Now()
 	log.Infoln("UploadManagerPool starting")
 	var poolGroup sync.WaitGroup
 	um.pool.Start(&poolGroup)
@@ -66,7 +69,6 @@ func (um UploadManagerPool) StartBlocking() {
 	close(um.Completed)
 	close(um.fragCollector.Track)
 	close(um.fragCollector.Collect)
-	log.Infof("UploadManagerPoolRan for %v", time.Now().Sub(startTime))
 }
 
 // Start asychronously calls StartBlocking via a Goroutine
@@ -74,6 +76,8 @@ func (um UploadManagerPool) Start(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		startTime := time.Now()
 		um.StartBlocking()
+		log.Infof("umanagerpool ran for %v", time.Now().Sub(startTime))
 	}()
 }

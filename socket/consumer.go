@@ -1,7 +1,6 @@
 package socket
 
 import (
-	"fmt"
 	"net"
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
@@ -62,17 +61,5 @@ func ProcessedFileHandler(acknowledger chan transmit.Serializable, fragCollector
 			}
 
 		}
-	}
-}
-
-// Consumer is a dummy setup to help test socket
-func Consumer(channel chan transmit.Serializable) {
-	for {
-		msg, ok := <-channel
-		if !ok {
-			return
-		}
-		fragDesc := msg.(*fragmentDesc)
-		fmt.Printf("Received: '%v'\n", *fragDesc)
 	}
 }
