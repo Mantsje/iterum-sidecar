@@ -16,7 +16,6 @@ type DownloadManagerPool struct {
 	Completed      chan transmit.Serializable // desc.LocalFragmentDesc
 	pool           DownloadPool
 	targetFolder   string
-	fragments      int
 	strictOrdering bool
 }
 
@@ -32,7 +31,6 @@ func NewDownloadManagerPool(toDownload, completed chan transmit.Serializable, fo
 		completed,
 		NewDownloadPool(25, minio),
 		folder,
-		0,
 		false,
 	}
 }
@@ -58,7 +56,7 @@ func (dm DownloadManagerPool) StartBlocking() {
 	downloaderGroup.Wait()
 	close(dm.pool.Input)
 	poolGroup.Wait()
-	log.Infof("DownloadManagerPool finishing up, (tried to) download(ed) %v fragments", dm.fragments)
+	log.Infof("DownloadManagerPool finishing up")
 	close(dm.Completed)
 }
 

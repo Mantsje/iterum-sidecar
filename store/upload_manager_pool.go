@@ -19,7 +19,6 @@ type UploadManagerPool struct {
 	pool           UploadPool
 	sidecarConfig  *config.Config
 	fragCollector  *garbage.FragmentCollector
-	fragments      int
 	strictOrdering bool
 }
 
@@ -37,7 +36,6 @@ func NewUploadManagerPool(toUpload, completed chan transmit.Serializable,
 		NewUploadPool(25, minio),
 		sidecarConfig,
 		collector,
-		0,
 		false,
 	}
 }
@@ -68,7 +66,7 @@ func (um UploadManagerPool) StartBlocking() {
 	close(um.pool.Input)
 	poolGroup.Wait()
 
-	log.Infof("UploadManagerPool finishing up, (tried to) upload(ed) %v fragments", um.fragments)
+	log.Infof("UploadManagerPool finishing up")
 	close(um.Completed)
 	close(um.fragCollector.Track)
 	close(um.fragCollector.Collect)
