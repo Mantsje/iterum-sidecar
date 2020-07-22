@@ -12,36 +12,35 @@ import (
 
 // FragmentUploader is a struct responsible for downloading a single fragment to local disk
 type FragmentUploader struct {
-	complete         chan desc.RemoteFileDesc // Channel to notify uploader of individual file completion
+	fileComplete     chan desc.RemoteFileDesc // Channel to notify uploader of individual file completion
+	UploadDescriptor desc.LocalFragmentDesc   // The fragment to upload
 	pool             *UploadPool
-	notifyManager    chan transmit.Serializable // Channel to notify upload_manager of fragment completion
-	UploadDescriptor desc.LocalFragmentDesc     // The fragment to upload
+	done             chan transmit.Serializable // Channel to send that the fragment is done uploading
 	sidecarConfig    *config.Config
 	fragCollector    *garbage.FragmentCollector
 }
 
 // NewFragmentUploader creates a new FragmentUploader instance that will download teh pass fragment description
-func NewFragmentUploader(msg desc.LocalFragmentDesc, pool *UploadPool, manager chan transmit.Serializable,
+func NewFragmentUploader(msg desc.LocalFragmentDesc, pool *UploadPool, done chan transmit.Serializable,
 	sidecarConf *config.Config, collector *garbage.FragmentCollector,
 ) FragmentUploader {
 	return FragmentUploader{
 		make(chan desc.RemoteFileDesc, len(msg.Files)),
-		pool,
-		manager,
 		msg,
+		pool,
+		done,
 		sidecarConf,
 		collector,
 	}
 }
 
 // completionTracker is a function that tracks whether all downloads have completed yet
-func (fu FragmentUploader) completionTracker(wg *sync.WaitGroup) {
-	defer wg.Done()
+func (fu FragmentUploader) completionTracker() {
 	// Lazy loop and wait until all files have been downloaded
 	var files []desc.RemoteFileDesc
 	var uploaded int = 0
 	for uploaded < len(fu.UploadDescriptor.Files) {
-		uploadedFile := <-fu.complete
+		uploadedFile := <-fu.fileComplete
 		files = append(files, uploadedFile)
 		uploaded++
 	}
@@ -51,14 +50,11 @@ func (fu FragmentUploader) completionTracker(wg *sync.WaitGroup) {
 		log.Errorln(err)
 	}
 	rfd := desc.RemoteFragmentDesc{Files: files, Metadata: meta}
-	fu.notifyManager <- &rfd
+	fu.done <- &rfd
 }
 
 // StartBlocking starts a tracker and the downloading process of each of the files
 func (fu *FragmentUploader) StartBlocking() {
-	wg := &sync.WaitGroup{}
-	wg.Add(2)
-
 	// The garbage collector should track the local fragment to be uploaded
 	// If there is no fragmentID in the desc then generate one
 	// (LocalFragmentDesc from users don't need to have an ID on arrival)
@@ -67,19 +63,15 @@ func (fu *FragmentUploader) StartBlocking() {
 	}
 	fu.fragCollector.Track <- &fu.UploadDescriptor
 
-	// Submit request for each file to be uploaded by a UploadPool
-	go func(wg *sync.WaitGroup) {
-		defer wg.Done()
-		for _, file := range fu.UploadDescriptor.Files {
-			fu.pool.Input <- uploadRequest{
-				descriptor: file,
-				completed:  fu.complete,
-			}
+	// Submit request for each file to be uploaded by the UploadPool
+	for _, file := range fu.UploadDescriptor.Files {
+		fu.pool.Input <- uploadRequest{
+			descriptor: file,
+			completed:  fu.fileComplete,
 		}
-	}(wg)
+	}
 	// Await the completion of those upload requests
-	go fu.completionTracker(wg)
-	wg.Wait()
+	fu.completionTracker()
 
 	// Once done uploading the garbage collector can remove the files locally
 	fu.fragCollector.Collect <- fu.UploadDescriptor.Metadata.FragmentID

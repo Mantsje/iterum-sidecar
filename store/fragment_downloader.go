@@ -28,11 +28,10 @@ func NewFragmentDownloader(msg desc.RemoteFragmentDesc, pool *DownloadPool, mana
 }
 
 // completionTracker is a function that tracks whether all downloads have completed yet
-func (d FragmentDownloader) completionTracker(wg *sync.WaitGroup) {
-	defer wg.Done()
-	// Lazy loop and wait until all files have been downloaded
+func (d FragmentDownloader) completionTracker() {
 	var files []desc.LocalFileDesc
 	var downloaded int = 0
+	// Lazy loop and wait until all files have been downloaded
 	for downloaded < len(d.DownloadDescriptor.Files) {
 		dloadedFile := <-d.complete
 		files = append(files, dloadedFile)
@@ -44,22 +43,16 @@ func (d FragmentDownloader) completionTracker(wg *sync.WaitGroup) {
 
 // StartBlocking starts a tracker and the downloading process of each of the files
 func (d FragmentDownloader) StartBlocking() {
-	wg := &sync.WaitGroup{}
-	wg.Add(2)
 	// Submit request for each file to be downloaded by a DownloadPool
-	go func(wg *sync.WaitGroup) {
-		defer wg.Done()
-		for _, file := range d.DownloadDescriptor.Files {
-			d.pool.Input <- downloadRequest{
-				descriptor: file,
-				completed:  d.complete,
-				folder:     d.Folder,
-			}
+	for _, file := range d.DownloadDescriptor.Files {
+		d.pool.Input <- downloadRequest{
+			descriptor: file,
+			completed:  d.complete,
+			folder:     d.Folder,
 		}
-	}(wg)
+	}
 	// Await the completion of those download requests
-	go d.completionTracker(wg)
-	wg.Wait()
+	d.completionTracker()
 }
 
 // Start asychronously calls StartBlocking via a Goroutine

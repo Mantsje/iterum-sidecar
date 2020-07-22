@@ -30,7 +30,7 @@ func NewDownloadManagerPool(toDownload, completed chan transmit.Serializable, fo
 	return DownloadManagerPool{
 		toDownload,
 		completed,
-		NewDownloadPool(10, minio),
+		NewDownloadPool(50, minio),
 		folder,
 		0,
 		false,
