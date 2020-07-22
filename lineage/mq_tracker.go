@@ -37,7 +37,7 @@ func (tracker MqTracker) StartBlocking() {
 		rfd := *msg.(*desc.RemoteFragmentDesc)
 		log.Debugf("Got '%v' to lineate\n", rfd)
 		// Send the lineage message to be published
-		tracker.Sender.ToSend <- &Message{tracker.TransformationName, rfd.Metadata.Predecessors}
+		tracker.Sender.ToSend <- &Message{tracker.TransformationName, rfd}
 		tracked++
 	}
 	log.Infof("Finishing up mq lineage tracker. Tracked %v fragments\n", tracked)

@@ -9,8 +9,8 @@ import (
 
 // Message is the structure holding the lineage information of a fragment
 type Message struct {
-	ProcessName  string          `json:"transformation_step"`
-	Predecessors []desc.IterumID `json:"predecessors"`
+	ProcessName string                  `json:"transformation_step"`
+	Fragment    desc.RemoteFragmentDesc `json:"description"`
 }
 
 // Serialize tries to transform `msg` into a json encoded bytearray. Errors on failure
