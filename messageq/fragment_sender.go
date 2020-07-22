@@ -2,6 +2,7 @@ package messageq
 
 import (
 	"sync"
+	"time"
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/iterum-provenance/iterum-go/transmit"
@@ -82,7 +83,9 @@ func (sender Sender) Start(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		startTime := time.Now()
 		sender.StartBlocking()
+		log.Infof("sender ran for %v", time.Now().Sub(startTime))
 	}()
 }
 

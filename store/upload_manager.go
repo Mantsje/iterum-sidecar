@@ -2,6 +2,7 @@ package store
 
 import (
 	"sync"
+	"time"
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/iterum-provenance/iterum-go/minio"
@@ -43,40 +44,42 @@ func NewUploadManager(toUpload, uploaded chan transmit.Serializable,
 }
 
 // StartBlocking enters an endless loop consuming LocalFragmentDesc and uploading the associated data
-func (um UploadManager) StartBlocking() {
+func (umanager UploadManager) StartBlocking() {
 	var wg sync.WaitGroup
 	for {
-		msg, ok := <-um.ToUpload
+		msg, ok := <-umanager.ToUpload
 		if !ok {
 			break
 		}
-		uloader := NewUploader(*msg.(*desc.LocalFragmentDesc), um.Minio, um.Completed, um.sidecarConfig, um.fragCollector)
+		uloader := NewUploader(*msg.(*desc.LocalFragmentDesc), umanager.Minio, umanager.Completed, umanager.sidecarConfig, umanager.fragCollector)
 
-		if um.strictOrdering {
+		if umanager.strictOrdering {
 			uloader.StartBlocking()
 		} else {
 			uloader.Start(&wg)
 		}
 
-		um.fragments++
+		umanager.fragments++
 	}
 	wg.Wait()
-	um.Stop()
+	umanager.Stop()
 }
 
 // Start asychronously calls StartBlocking via a Goroutine
-func (um UploadManager) Start(wg *sync.WaitGroup) {
+func (umanager UploadManager) Start(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		um.StartBlocking()
+		startTime := time.Now()
+		umanager.StartBlocking()
+		log.Infof("umanager ran for %v", time.Now().Sub(startTime))
 	}()
 }
 
 // Stop finishes up and notifies the user of its progress
-func (um UploadManager) Stop() {
-	log.Infof("UploadManager finishing up, (tried to) upload(ed) %v fragments", um.fragments)
-	close(um.Completed)
-	close(um.fragCollector.Track)
-	close(um.fragCollector.Collect)
+func (umanager UploadManager) Stop() {
+	log.Infof("UploadManager finishing up, (tried to) upload(ed) %v fragments", umanager.fragments)
+	close(umanager.Completed)
+	close(umanager.fragCollector.Track)
+	close(umanager.fragCollector.Collect)
 }

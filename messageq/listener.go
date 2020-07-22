@@ -106,6 +106,8 @@ func (listener *Listener) Start(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		listener.StartBlocking()
+		startTime := time.Now()
+        listener.StartBlocking()
+	    log.Infof("listener ran for %v", time.Now().Sub(startTime))
 	}()
 }

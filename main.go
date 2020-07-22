@@ -2,6 +2,7 @@ package main
 
 import (
 	"sync"
+	"time"
 
 	"github.com/iterum-provenance/iterum-go/manager"
 	"github.com/iterum-provenance/iterum-go/process"
@@ -14,11 +15,13 @@ import (
 	mq "github.com/iterum-provenance/sidecar/messageq"
 	"github.com/iterum-provenance/sidecar/socket"
 	"github.com/iterum-provenance/sidecar/store"
+	"github.com/prometheus/common/log"
 )
 
 func main() {
 	// log.Base().SetLevel("Debug")
-
+	// log.Base().SetLevel("Info")
+	startTime := time.Now()
 	var wg sync.WaitGroup
 
 	// Pass remote fragments from the message queue listener to the downloader
@@ -103,4 +106,5 @@ func main() {
 	lineageTracker.Start(&wg)
 
 	wg.Wait()
+	log.Infof("Ran for %v", time.Now().Sub(startTime))
 }

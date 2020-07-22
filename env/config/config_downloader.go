@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"sync"
+	"time"
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/iterum-provenance/iterum-go/minio"
@@ -33,28 +34,28 @@ func NewDownloader(config *Config) Downloader {
 	}
 }
 
-func (cd Downloader) downloadConfigFile(file string) (localFile desc.LocalFileDesc, err error) {
+func (cfgdownloader Downloader) downloadConfigFile(file string) (localFile desc.LocalFileDesc, err error) {
 	defer util.ReturnErrOnPanic(&err)()
-	return cd.Minio.GetConfigFile(file)
+	return cfgdownloader.Minio.GetConfigFile(file)
 }
 
-func (cd *Downloader) findFilesToDownload() {
-	files := cd.Minio.ListConfigFiles()
+func (cfgdownloader *Downloader) findFilesToDownload() {
+	files := cfgdownloader.Minio.ListConfigFiles()
 	log.Infoln("Printing ListConfigFiles results")
 	log.Infoln(files)
-	cd.toDownload = cd.Config.ReturnMatchingFiles(files)
+	cfgdownloader.toDownload = cfgdownloader.Config.ReturnMatchingFiles(files)
 }
 
 // StartBlocking starts the process of downloading the config files
-func (cd *Downloader) StartBlocking() {
-	if cd.Config == nil || cd.Config.ConfigFiles == nil {
+func (cfgdownloader *Downloader) StartBlocking() {
+	if cfgdownloader.Config == nil || cfgdownloader.Config.ConfigFiles == nil {
 		log.Infoln("No config(-files) submitted to sidecar, so no files to download")
 		return
 	}
 
-	cd.findFilesToDownload()
+	cfgdownloader.findFilesToDownload()
 
-	log.Infof("Starting to download %v config files", len(cd.toDownload))
+	log.Infof("Starting to download %v config files", len(cfgdownloader.toDownload))
 	wg := &sync.WaitGroup{}
 	// Ensure that the directory exists
 	err := os.MkdirAll(process.ConfigPath, os.ModePerm)
@@ -63,10 +64,10 @@ func (cd *Downloader) StartBlocking() {
 	}
 
 	// Start the downloading of each config file
-	for _, file := range cd.toDownload {
+	for _, file := range cfgdownloader.toDownload {
 		wg.Add(1)
 		go func(f string) {
-			_, err := cd.downloadConfigFile(f)
+			_, err := cfgdownloader.downloadConfigFile(f)
 			if err != nil {
 				log.Errorf("Could not download config file due to '%v'", err)
 			}
@@ -79,10 +80,12 @@ func (cd *Downloader) StartBlocking() {
 }
 
 // Start is an asyncrhonous alternative to StartBlocking by spawning a goroutine
-func (cd *Downloader) Start(wg *sync.WaitGroup) {
+func (cfgdownloader *Downloader) Start(wg *sync.WaitGroup) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		cd.StartBlocking()
+		startTime := time.Now()
+		cfgdownloader.StartBlocking()
+		log.Infof("cfgdownloader ran for %v", time.Now().Sub(startTime))
 	}()
 }
