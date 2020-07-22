@@ -30,7 +30,7 @@ func NewDownloadManagerPool(toDownload, completed chan transmit.Serializable, fo
 	return DownloadManagerPool{
 		toDownload,
 		completed,
-		NewDownloadPool(50, minio),
+		NewDownloadPool(25, minio),
 		folder,
 		0,
 		false,
@@ -43,15 +43,16 @@ func (dm DownloadManagerPool) StartBlocking() {
 	var poolGroup sync.WaitGroup
 	dm.pool.Start(&poolGroup)
 	var downloaderGroup sync.WaitGroup
-	for msg := range dm.ToDownload {
-		rfd := *msg.(*desc.RemoteFragmentDesc)
-		dloader := NewFragmentDownloader(rfd, &dm.pool, dm.Completed, dm.targetFolder)
-		if dm.strictOrdering {
-			dloader.StartBlocking()
-		} else {
-			dloader.Start(&downloaderGroup)
-		}
-		dm.fragments++
+	for i := 0; i < dm.pool.Size()+5; i++ {
+		downloaderGroup.Add(1)
+		go func() {
+			defer downloaderGroup.Done()
+			for msg := range dm.ToDownload {
+				rfd := *msg.(*desc.RemoteFragmentDesc)
+				dloader := NewFragmentDownloader(rfd, &dm.pool, dm.Completed, dm.targetFolder)
+				dloader.StartBlocking()
+			}
+		}()
 	}
 	log.Infoln("DownloadManagerPool awaiting child routines")
 	downloaderGroup.Wait()

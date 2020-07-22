@@ -34,7 +34,7 @@ func NewUploadManagerPool(toUpload, completed chan transmit.Serializable,
 	return UploadManagerPool{
 		toUpload,
 		completed,
-		NewUploadPool(50, minio),
+		NewUploadPool(25, minio),
 		sidecarConfig,
 		collector,
 		0,
@@ -51,15 +51,16 @@ func (um UploadManagerPool) StartBlocking() {
 	var uploaderGroup sync.WaitGroup
 	// For each fragment, spawn a FragmentUploader which tries to upload one fragment
 	// It submits UploadRequests to the upload pool for each file in the fragment.
-	for msg := range um.ToUpload {
-		lfd := *msg.(*desc.LocalFragmentDesc)
-		uloader := NewFragmentUploader(lfd, &um.pool, um.Completed, um.sidecarConfig, um.fragCollector)
-		if um.strictOrdering {
-			uloader.StartBlocking()
-		} else {
-			uloader.Start(&uploaderGroup)
-		}
-		um.fragments++
+	for i := 0; i < um.pool.Size()+5; i++ {
+		uploaderGroup.Add(1)
+		go func() {
+			defer uploaderGroup.Done()
+			for msg := range um.ToUpload {
+				lfd := *msg.(*desc.LocalFragmentDesc)
+				uloader := NewFragmentUploader(lfd, &um.pool, um.Completed, um.sidecarConfig, um.fragCollector)
+				uloader.StartBlocking()
+			}
+		}()
 	}
 
 	log.Infoln("UploadManagerPool awaiting child routines")
