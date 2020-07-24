@@ -1,5 +1,5 @@
-// Package garbage contains the Fragment Garbage Collection functionality of the Iterum Sidecar
-// it prevents the pods from bloating with all data over time by removing all files relating to fragments
+// Package garbage contains the Fragment Garbage Collection functionality of the Iterum Sidecar.
+// It prevents the pods from bloating with all data over time by removing all files relating to fragments
 // that are no longer needed. This can only be performed upon the user-defined transformations informing
 // the sidecar that this action is allowed for a certain fragment.
 package garbage
