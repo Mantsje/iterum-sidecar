@@ -4,16 +4,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/iterum-provenance/iterum-go/lineage"
 	"github.com/iterum-provenance/iterum-go/manager"
+	mq "github.com/iterum-provenance/iterum-go/messageq"
 	"github.com/iterum-provenance/iterum-go/process"
+	"github.com/iterum-provenance/iterum-go/socket"
 	"github.com/iterum-provenance/iterum-go/transmit"
 	"github.com/iterum-provenance/iterum-go/util"
 	"github.com/iterum-provenance/sidecar/env"
 	"github.com/iterum-provenance/sidecar/env/config"
 	"github.com/iterum-provenance/sidecar/garbage"
-	"github.com/iterum-provenance/sidecar/lineage"
-	mq "github.com/iterum-provenance/sidecar/messageq"
-	"github.com/iterum-provenance/sidecar/socket"
+	"github.com/iterum-provenance/sidecar/handler"
 	"github.com/iterum-provenance/sidecar/store"
 	"github.com/prometheus/common/log"
 )
@@ -71,14 +72,14 @@ func main() {
 
 	// Pass local fragment description to transformation
 	toSocketFile := env.TransformationStepInputSocket
-	outboundFragmentHandler := socket.SendFileHandler(fragCollector)
+	outboundFragmentHandler := handler.SendFileHandler(fragCollector)
 	toSocket, err := socket.NewSocket(toSocketFile, downloaderSocketBridge, outboundFragmentHandler)
 	util.Ensure(err, "OUtbound socket towards transformation succesfully opened and listening")
 	toSocket.Start(&wg)
 
 	// Receive processed fragment descriptions
 	fromSocketFile := env.TransformationStepOutputSocket
-	inboundFragmentHandler := socket.ProcessedFileHandler(socketAcknowledgerBridge, fragCollector)
+	inboundFragmentHandler := handler.ProcessedFileHandler(socketAcknowledgerBridge, fragCollector)
 	fromSocket, err := socket.NewSocket(fromSocketFile, socketUploaderBridge, inboundFragmentHandler)
 	util.Ensure(err, "Inbound socket from transformation succesfully opened and listening")
 	fromSocket.Start(&wg)

@@ -1,9 +1,10 @@
-package socket
+package handler
 
 import (
 	"net"
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
+	"github.com/iterum-provenance/iterum-go/socket"
 	"github.com/iterum-provenance/sidecar/garbage"
 
 	"github.com/iterum-provenance/iterum-go/transmit"
@@ -11,8 +12,8 @@ import (
 )
 
 // SendFileHandler is a handler function for a socket that sends files to the transformation step
-func SendFileHandler(fragCollector garbage.FragmentCollector) func(socket Socket, conn net.Conn) {
-	return func(socket Socket, conn net.Conn) {
+func SendFileHandler(fragCollector garbage.FragmentCollector) func(socket socket.Socket, conn net.Conn) {
+	return func(socket socket.Socket, conn net.Conn) {
 		defer conn.Close()
 		for {
 			// Wait for the next job to come off the queue.

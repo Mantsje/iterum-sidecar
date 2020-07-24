@@ -1,9 +1,10 @@
-package socket
+package handler
 
 import (
 	"net"
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
+	"github.com/iterum-provenance/iterum-go/socket"
 	"github.com/iterum-provenance/iterum-go/transmit"
 	"github.com/iterum-provenance/sidecar/garbage"
 
@@ -11,8 +12,8 @@ import (
 )
 
 // ProcessedFileHandler is a handler for a socket that receives processed files from the transformation step
-func ProcessedFileHandler(acknowledger chan transmit.Serializable, fragCollector garbage.FragmentCollector) func(socket Socket, conn net.Conn) {
-	return func(socket Socket, conn net.Conn) {
+func ProcessedFileHandler(acknowledger chan transmit.Serializable, fragCollector garbage.FragmentCollector) func(socket socket.Socket, conn net.Conn) {
+	return func(socket socket.Socket, conn net.Conn) {
 		defer conn.Close()
 		for {
 			encMsg, err := transmit.ReadMessage(conn)
