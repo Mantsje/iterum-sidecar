@@ -3,12 +3,13 @@ package handler
 import (
 	"net"
 
+	"github.com/prometheus/common/log"
+
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/iterum-provenance/iterum-go/socket"
-	"github.com/iterum-provenance/sidecar/garbage"
-
 	"github.com/iterum-provenance/iterum-go/transmit"
-	"github.com/prometheus/common/log"
+
+	"github.com/iterum-provenance/sidecar/garbage"
 )
 
 // SendFileHandler is a handler function for a socket that sends files to the transformation step

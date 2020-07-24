@@ -1,3 +1,7 @@
+// Package env contains setup for important environment variables used by the Iterum sidecar.
+// Thanks to the init function the usage of these environment variables is checked before they are used
+// this ensures that if any of these have an invalid value the applications will crash immediately at the
+// start of execution.
 package env
 
 import (
@@ -5,12 +9,24 @@ import (
 	"path"
 	"strings"
 
+	"github.com/prometheus/common/log"
+
 	"github.com/iterum-provenance/iterum-go/env"
 	"github.com/iterum-provenance/iterum-go/process"
 	"github.com/iterum-provenance/iterum-go/util"
+
 	"github.com/iterum-provenance/sidecar/env/config"
-	"github.com/prometheus/common/log"
 )
+
+func init() {
+	errSidecar := VerifySidecarEnvs()
+	errSidecarConf := VerifySidecarConfig()
+
+	err := util.ReturnFirstErr(errSidecar, errSidecarConf)
+	if err != nil {
+		log.Fatalln(err)
+	}
+}
 
 const (
 	inputSocketEnv  = "TRANSFORMATION_STEP_INPUT"
@@ -47,14 +63,4 @@ func VerifySidecarConfig() error {
 		SidecarConfig = &c
 	}
 	return nil
-}
-
-func init() {
-	errSidecar := VerifySidecarEnvs()
-	errSidecarConf := VerifySidecarConfig()
-
-	err := util.ReturnFirstErr(errSidecar, errSidecarConf)
-	if err != nil {
-		log.Fatalln(err)
-	}
 }

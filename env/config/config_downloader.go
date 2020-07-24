@@ -5,11 +5,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/common/log"
+
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/iterum-provenance/iterum-go/minio"
 	"github.com/iterum-provenance/iterum-go/process"
 	"github.com/iterum-provenance/iterum-go/util"
-	"github.com/prometheus/common/log"
 )
 
 // Downloader is the structure responsible for downloading
@@ -34,11 +35,14 @@ func NewDownloader(config *Config) Downloader {
 	}
 }
 
+// downloadConfigFile downloads a single configuration file
 func (cfgdownloader Downloader) downloadConfigFile(file string) (localFile desc.LocalFileDesc, err error) {
 	defer util.ReturnErrOnPanic(&err)()
 	return cfgdownloader.Minio.GetConfigFile(file)
 }
 
+// findFilesToDownload finds the list of files that should be downloaded as
+// configuration files for the associated transformation
 func (cfgdownloader *Downloader) findFilesToDownload() {
 	files := cfgdownloader.Minio.ListConfigFiles()
 	log.Infoln("Printing ListConfigFiles results")

@@ -8,6 +8,7 @@ import (
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/iterum-provenance/iterum-go/minio"
 	"github.com/iterum-provenance/iterum-go/transmit"
+
 	"github.com/iterum-provenance/sidecar/env/config"
 	"github.com/iterum-provenance/sidecar/garbage"
 )
@@ -71,6 +72,7 @@ func (u *Uploader) completionTracker(wg *sync.WaitGroup) {
 	u.NotifyManager <- &rfd
 }
 
+// upload performs the actual upload to Minio
 func (u *Uploader) upload(descriptor desc.LocalFileDesc, wg *sync.WaitGroup) {
 	defer wg.Done()
 	remoteFile, err := u.Minio.PutFile(descriptor, true)

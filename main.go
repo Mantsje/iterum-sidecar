@@ -4,6 +4,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/common/log"
+
 	"github.com/iterum-provenance/iterum-go/lineage"
 	"github.com/iterum-provenance/iterum-go/manager"
 	mq "github.com/iterum-provenance/iterum-go/messageq"
@@ -11,12 +13,12 @@ import (
 	"github.com/iterum-provenance/iterum-go/socket"
 	"github.com/iterum-provenance/iterum-go/transmit"
 	"github.com/iterum-provenance/iterum-go/util"
+
 	"github.com/iterum-provenance/sidecar/env"
 	"github.com/iterum-provenance/sidecar/env/config"
 	"github.com/iterum-provenance/sidecar/garbage"
 	"github.com/iterum-provenance/sidecar/handler"
 	"github.com/iterum-provenance/sidecar/store"
-	"github.com/prometheus/common/log"
 )
 
 func main() {
@@ -24,6 +26,8 @@ func main() {
 	// log.Base().SetLevel("Info")
 	startTime := time.Now()
 	var wg sync.WaitGroup
+
+	// ######################## Channel setup ######################## \\
 
 	// Pass remote fragments from the message queue listener to the downloader
 	mqDownloaderBridgeBufferSize := 10
@@ -105,6 +109,8 @@ func main() {
 	// Track lineage information by posting it on a message queue
 	lineageTracker := lineage.NewMqTracker(process.Name, process.PipelineHash, brokerURL, mqLineageBridge)
 	lineageTracker.Start(&wg)
+
+	// ######################## Await completion and finalize ######################## \\
 
 	wg.Wait()
 	log.Infof("Ran for %v", time.Now().Sub(startTime))

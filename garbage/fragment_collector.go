@@ -1,3 +1,7 @@
+// Package garbage contains the Fragment Garbage Collection functionality of the Iterum Sidecar
+// it prevents the pods from bloating with all data over time by removing all files relating to fragments
+// that are no longer needed. This can only be performed upon the user-defined transformations informing
+// the sidecar that this action is allowed for a certain fragment.
 package garbage
 
 import (
@@ -5,8 +9,9 @@ import (
 	"sync"
 	"time"
 
-	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/prometheus/common/log"
+
+	desc "github.com/iterum-provenance/iterum-go/descriptors"
 )
 
 // FragmentCollector keeps track of all incoming and outgoing fragments
@@ -29,6 +34,7 @@ func NewFragmentCollector() FragmentCollector {
 	}
 }
 
+// deleteFromDisk removes all files assocaited with a LocalFragmentDesc from the disk
 func (fgarbage *FragmentCollector) deleteFromDisk(frag *desc.LocalFragmentDesc) {
 	for _, fileDesc := range frag.Files {
 		err := os.Remove(fileDesc.LocalPath)
@@ -68,6 +74,8 @@ func (fgarbage *FragmentCollector) StartBlocking() {
 			delete(fgarbage.backlog, fragID)
 		}
 	}
+	// Some files and data may be removed before it is tracked due to random choice of input channel `select` consumes from
+	// This eliminates all untracked files that were actually properly deleted, preventing wrong errors
 	if len(fgarbage.backlog) != 0 {
 		// Remove all untracked ids
 		for _, untrackedID := range fgarbage.untracked {

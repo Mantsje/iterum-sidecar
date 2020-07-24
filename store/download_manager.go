@@ -4,10 +4,10 @@ import (
 	"sync"
 	"time"
 
-	desc "github.com/iterum-provenance/iterum-go/descriptors"
-	"github.com/iterum-provenance/iterum-go/minio"
 	"github.com/prometheus/common/log"
 
+	desc "github.com/iterum-provenance/iterum-go/descriptors"
+	"github.com/iterum-provenance/iterum-go/minio"
 	"github.com/iterum-provenance/iterum-go/transmit"
 )
 

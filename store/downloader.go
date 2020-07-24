@@ -8,7 +8,6 @@ import (
 
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/iterum-provenance/iterum-go/minio"
-
 	"github.com/iterum-provenance/iterum-go/transmit"
 )
 
@@ -62,6 +61,7 @@ func (d Downloader) completionTracker(wg *sync.WaitGroup) {
 	d.NotifyManager <- &lfd
 }
 
+// download performs the actual download from the Minio storage
 func (d Downloader) download(descriptor desc.RemoteFileDesc, wg *sync.WaitGroup) {
 	defer wg.Done()
 	localFileDesc, err := d.Minio.GetFile(descriptor, d.Folder, true)

@@ -4,13 +4,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/common/log"
+
 	desc "github.com/iterum-provenance/iterum-go/descriptors"
 	"github.com/iterum-provenance/iterum-go/minio"
 	"github.com/iterum-provenance/iterum-go/transmit"
+
 	"github.com/iterum-provenance/sidecar/env/config"
 	"github.com/iterum-provenance/sidecar/garbage"
-
-	"github.com/prometheus/common/log"
 )
 
 // UploadManager is the structure that consumes LocalFragmentDesc structures and uploads them to minio
